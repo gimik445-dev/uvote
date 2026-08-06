@@ -2,10 +2,16 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 
-const connectionString = process.env.DATABASE_URL!;
+// Vercel's Postgres marketplace integrations (Neon, Supabase, etc.) don't
+// all name their injected env var DATABASE_URL — fall back to the common
+// alternates so this works regardless of which one gets connected.
+const connectionString =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_URL_NON_POOLING!;
 
-// A small connection pool is fine for serverless-ish usage; Next.js route
-// handlers each get a module-level singleton via this file.
-const client = postgres(connectionString, { max: 10 });
+// Serverless functions spin up many short-lived instances, so keep the
+// per-instance pool small — Neon/Supabase free tiers cap total connections.
+const client = postgres(connectionString, { max: 3 });
 
 export const db = drizzle(client, { schema });
