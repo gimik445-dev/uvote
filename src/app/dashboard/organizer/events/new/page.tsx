@@ -111,17 +111,10 @@ export default function NewEventPage() {
           </p>
         </Field>
         <Field label="Cover emoji">
-          <input
-            value={coverEmoji}
-            onChange={(e) => setCoverEmoji(e.target.value)}
-            placeholder="🏆"
-            maxLength={8}
-            className="input max-w-[120px]"
-          />
-          <p className="text-xs text-ink-mute mt-1.5">
-            No emoji keyboard? Just click one below.
-          </p>
           <EmojiPicker value={coverEmoji} onChange={setCoverEmoji} />
+          <p className="text-xs text-ink-mute mt-1.5">
+            Click the emoji to choose one — used when there&apos;s no cover photo.
+          </p>
         </Field>
         <div className="grid grid-cols-2 gap-4">
           <Field label="USSD code (optional)">
