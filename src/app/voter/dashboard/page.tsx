@@ -10,12 +10,12 @@ export default async function VoterDashboardPage() {
   const session = await getVoterSession();
   if (!session) {
     return (
-      <main className="flex-1 flex flex-col">
-        <div className="max-w-6xl mx-auto px-6 pt-5 w-full">
-          <Logo size="sm" />
-        </div>
-        <div className="flex-1 flex items-center justify-center px-6 py-10">
-          <div className="card p-8 max-w-sm text-center">
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-10">
+        <div className="max-w-sm w-full flex flex-col items-center">
+          <div className="mb-6">
+            <Logo size="sm" />
+          </div>
+          <div className="card p-8 text-center w-full">
             <div className="text-3xl mb-4">🔒</div>
             <h1 className="text-xl font-extrabold mb-2">You&apos;re not signed in</h1>
             <p className="text-sm text-ink-dim leading-relaxed mb-5">
