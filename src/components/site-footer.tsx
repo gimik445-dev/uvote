@@ -50,8 +50,21 @@ export function SiteFooter() {
           </div>
         </div>
         <div className="border-t border-white/15">
-          <div className="max-w-6xl mx-auto px-6 py-5 text-xs text-white/60">
-            © {new Date().getFullYear()} uVote. Built for schools, churches, clubs and community groups.
+          <div className="max-w-6xl mx-auto px-6 py-5 text-xs text-white/60 flex flex-wrap gap-x-4 gap-y-1">
+            <span>
+              © {new Date().getFullYear()} uVote. Built for schools, churches, clubs and community groups.
+            </span>
+            <span>
+              Emoji graphics by{" "}
+              <a href="https://github.com/jdecked/twemoji" className="underline">
+                Twemoji
+              </a>
+              , licensed under{" "}
+              <a href="https://creativecommons.org/licenses/by/4.0/" className="underline">
+                CC-BY 4.0
+              </a>
+              .
+            </span>
           </div>
         </div>
       </div>
