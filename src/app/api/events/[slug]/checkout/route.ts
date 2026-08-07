@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { events, nominees, categories, payments } from "@/db/schema";
 import { initializeTransaction } from "@/lib/paystack";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { normalizePhone } from "@/lib/sms";
 
 const schema = z.object({
   nomineeId: z.string().uuid(),
@@ -95,7 +96,9 @@ export async function POST(
     eventId: event.id,
     nomineeId: nominee.id,
     paystackReference: reference,
-    voterPhone: phone,
+    // Normalized so a voter who later signs in to see their vote history
+    // matches regardless of which format they typed at checkout.
+    voterPhone: phone ? normalizePhone(phone) : undefined,
     voterEmail: email,
     voteCount,
     amount: amount.toFixed(2),

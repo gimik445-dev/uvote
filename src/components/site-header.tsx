@@ -12,6 +12,7 @@ export function SiteHeader() {
           <Link href="/#events">Events</Link>
           <Link href="/#how">How it works</Link>
           <Link href="/faq">FAQ</Link>
+          <Link href="/voter/login">My Votes</Link>
         </nav>
         <div className="flex items-center justify-between gap-3 w-full sm:w-auto sm:justify-end">
           <Link href="/login" className="btn btn-ghost btn-sm flex-1 sm:flex-none px-6">Staff Login</Link>

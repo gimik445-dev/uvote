@@ -163,6 +163,28 @@ export const nomineeLoginTokens = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Voter OTPs — a voter isn't a `users` row (see note above); to let them
+// look up their own vote history we prove phone ownership with a short-
+// lived one-time code texted to them, rather than a password. Only the
+// code's SHA-256 hash is stored, mirroring the nominee login tokens.
+// ---------------------------------------------------------------------------
+export const voterOtps = pgTable(
+  "voter_otps",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    // Normalized "233XXXXXXXXX" form (see normalizePhone in src/lib/sms.ts)
+    // so lookups don't depend on how the voter typed their number.
+    phone: varchar("phone", { length: 32 }).notNull(),
+    codeHash: varchar("code_hash", { length: 64 }).notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("voter_otps_phone_idx").on(table.phone)]
+);
+
+// ---------------------------------------------------------------------------
 // Payments — one row per checkout attempt (Paystack transaction).
 // Votes are only ever created once a payment's status flips to "success"
 // via the verified webhook — never on the client's say-so.

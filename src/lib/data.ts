@@ -90,6 +90,33 @@ export async function getNomineeDashboard(nomineeId: string) {
   };
 }
 
+// A voter's own vote history — every successful payment made with this
+// (normalized) phone number, across every event. Only ever called with a
+// phone the caller has proved ownership of via OTP (see
+// src/lib/voter-session.ts) — never exposed as a lookup-by-phone endpoint.
+export async function getVoterVoteHistory(phone: string) {
+  const rows = await db.query.payments.findMany({
+    where: and(eq(payments.voterPhone, phone), eq(payments.status, "success")),
+    orderBy: desc(payments.verifiedAt),
+    with: {
+      nominee: {
+        columns: { id: true, displayName: true, photoUrl: true },
+        with: {
+          category: {
+            columns: { id: true, name: true },
+            with: { event: { columns: { id: true, title: true, slug: true, currency: true } } },
+          },
+        },
+      },
+    },
+  });
+
+  const totalVotes = rows.reduce((sum, r) => sum + r.voteCount, 0);
+  const totalSpent = rows.reduce((sum, r) => sum + Number(r.amount), 0);
+
+  return { phone, totalVotes, totalSpent, votes: rows };
+}
+
 export async function getOrganizerEventDetail(organizationId: string, eventId: string) {
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
