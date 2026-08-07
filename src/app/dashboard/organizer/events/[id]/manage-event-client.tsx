@@ -21,7 +21,17 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (res.ok) router.refresh();
+      if (!res.ok) return;
+
+      if (status === "active") {
+        // Going active is the "you're done setting this up" moment — send
+        // the organizer back to their event list instead of leaving them
+        // stranded on the page they just finished with.
+        router.push("/dashboard/organizer");
+        router.refresh();
+      } else {
+        router.refresh();
+      }
     } finally {
       setBusy(false);
     }
@@ -92,7 +102,7 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
               onClick={() => setStatus("active")}
               className="btn btn-primary btn-sm"
             >
-              Set Active
+              {busy ? "Activating…" : "Set Active"}
             </button>
           )}
           {event.status === "active" && (
