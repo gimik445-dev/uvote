@@ -1,8 +1,43 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getEventBySlug } from "@/lib/data";
 import { EventVotingClient } from "./voting-client";
 import { Logo } from "@/components/logo";
+
+// Gives each live event its own title/description/preview-image in search
+// results and when the link is shared — rather than every event page
+// showing the same generic "uVote" preview.
+export async function generateMetadata({
+  params,
+}: PageProps<"/events/[slug]">): Promise<Metadata> {
+  const { slug } = await params;
+  const event = await getEventBySlug(slug);
+  if (!event) return {};
+
+  const title = `${event.title} — uVote`;
+  const description =
+    event.description ??
+    `Vote for your favorite nominee in ${event.title} on uVote — pay-per-vote fundraising, mobile money and card checkout.`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/events/${event.slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `/events/${event.slug}`,
+      images: event.coverImageUrl ? [{ url: event.coverImageUrl }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: event.coverImageUrl ? [event.coverImageUrl] : undefined,
+    },
+  };
+}
 
 export default async function EventPage({
   params,
