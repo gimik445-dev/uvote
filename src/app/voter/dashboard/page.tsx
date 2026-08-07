@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/logo";
 import { getVoterSession } from "@/lib/voter-session";
 import { getVoterVoteHistory } from "@/lib/data";
 import { VoterHeader } from "./voter-header";
@@ -9,16 +10,21 @@ export default async function VoterDashboardPage() {
   const session = await getVoterSession();
   if (!session) {
     return (
-      <main className="flex-1 flex items-center justify-center px-6 py-20">
-        <div className="card p-8 max-w-sm text-center">
-          <div className="text-3xl mb-4">🔒</div>
-          <h1 className="text-xl font-extrabold mb-2">You&apos;re not signed in</h1>
-          <p className="text-sm text-ink-dim leading-relaxed mb-5">
-            Log in with the phone number you voted with to see your vote history.
-          </p>
-          <Link href="/voter/login" className="btn btn-primary btn-sm">
-            Log in
-          </Link>
+      <main className="flex-1 flex flex-col">
+        <div className="max-w-6xl mx-auto px-6 pt-5 w-full">
+          <Logo size="sm" />
+        </div>
+        <div className="flex-1 flex items-center justify-center px-6 py-10">
+          <div className="card p-8 max-w-sm text-center">
+            <div className="text-3xl mb-4">🔒</div>
+            <h1 className="text-xl font-extrabold mb-2">You&apos;re not signed in</h1>
+            <p className="text-sm text-ink-dim leading-relaxed mb-5">
+              Log in with the phone number you voted with to see your vote history.
+            </p>
+            <Link href="/voter/login" className="btn btn-primary btn-sm">
+              Log in
+            </Link>
+          </div>
         </div>
       </main>
     );

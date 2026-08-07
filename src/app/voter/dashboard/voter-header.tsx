@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Logo } from "@/components/logo";
 
 export function VoterHeader({ phone }: { phone: string }) {
   const router = useRouter();
@@ -13,7 +14,8 @@ export function VoterHeader({ phone }: { phone: string }) {
   return (
     <header className="border-b border-border">
       <div className="max-w-xl mx-auto px-6 py-4 flex items-center justify-between gap-3">
-        <div className="min-w-0">
+        <Logo size="sm" />
+        <div className="min-w-0 text-right">
           <div className="text-[11px] font-extrabold tracking-wide text-ink-mute uppercase">
             Signed in as
           </div>
