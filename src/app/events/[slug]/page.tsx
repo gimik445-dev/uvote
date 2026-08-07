@@ -18,8 +18,10 @@ export default async function EventPage({
       </div>
 
       <div
-        className={`border-b border-border mt-4 relative ${
-          event.coverImageUrl ? "bg-cover bg-center" : "bg-gradient-to-br from-brand/10 to-accent/10"
+        className={`border-b border-border mt-4 relative flex flex-col justify-end ${
+          event.coverImageUrl
+            ? "bg-cover bg-center min-h-[220px] sm:min-h-[280px] lg:min-h-[340px]"
+            : "bg-gradient-to-br from-brand/10 to-accent/10"
         }`}
         style={event.coverImageUrl ? { backgroundImage: `url(${event.coverImageUrl})` } : undefined}
       >
