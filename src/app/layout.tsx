@@ -69,6 +69,13 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  verification: {
+    // Proves ownership to Google Search Console (URL-prefix property for
+    // uvote-three.vercel.app) so the sitemap can be submitted. Safe to
+    // publish — this token only proves control of the page, it can't be
+    // used to take any action on the site or the Search Console account.
+    google: "2NbNU1j1xCrJRvboyEWCWMg8UJ56GMR2ex9xG2vRfz8",
+  },
 };
 
 // Organization + WebSite structured data (JSON-LD). This is what lets
