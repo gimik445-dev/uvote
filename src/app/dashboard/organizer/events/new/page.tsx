@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { ORGANIZER_LINKS } from "@/components/organizer-nav-links";
+import { EmojiPicker } from "@/components/emoji-picker";
 
 export default function NewEventPage() {
   const router = useRouter();
@@ -109,16 +110,20 @@ export default function NewEventPage() {
             Used as the background banner on nominees&apos; private results page.
           </p>
         </Field>
+        <Field label="Cover emoji">
+          <input
+            value={coverEmoji}
+            onChange={(e) => setCoverEmoji(e.target.value)}
+            placeholder="🏆"
+            maxLength={8}
+            className="input max-w-[120px]"
+          />
+          <p className="text-xs text-ink-mute mt-1.5">
+            No emoji keyboard? Just click one below.
+          </p>
+          <EmojiPicker value={coverEmoji} onChange={setCoverEmoji} />
+        </Field>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Cover emoji">
-            <input
-              value={coverEmoji}
-              onChange={(e) => setCoverEmoji(e.target.value)}
-              placeholder="🏆"
-              maxLength={8}
-              className="input"
-            />
-          </Field>
           <Field label="USSD code (optional)">
             <input
               value={ussdCode}
@@ -127,8 +132,6 @@ export default function NewEventPage() {
               className="input"
             />
           </Field>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
           <Field label="Price per vote (GHS)">
             <input
               type="number"
