@@ -43,9 +43,20 @@ export default async function LandingPage() {
                 href={`/events/${event.slug}`}
                 className="card overflow-hidden hover:border-brand transition-colors"
               >
-                <div className="h-28 bg-gradient-to-br from-brand/10 to-accent/10 flex items-start justify-between px-5 pt-4">
-                  <span className="text-4xl">{event.coverEmoji}</span>
-                  <span className="badge badge-good">Active</span>
+                <div
+                  className={`h-28 flex items-start justify-between px-5 pt-4 relative ${
+                    event.coverImageUrl ? "bg-cover bg-center" : "bg-gradient-to-br from-brand/10 to-accent/10"
+                  }`}
+                  style={event.coverImageUrl ? { backgroundImage: `url(${event.coverImageUrl})` } : undefined}
+                >
+                  {event.coverImageUrl && (
+                    <div
+                      className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/45"
+                      aria-hidden="true"
+                    />
+                  )}
+                  {!event.coverImageUrl && <span className="text-4xl">{event.coverEmoji}</span>}
+                  <span className="badge badge-good relative ml-auto">Active</span>
                 </div>
                 <div className="p-5">
                   <h3 className="font-bold mb-1.5">{event.title}</h3>
