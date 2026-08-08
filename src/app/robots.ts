@@ -13,6 +13,7 @@ export default function robots(): MetadataRoute.Robots {
         "/voter/dashboard",
         "/nominee/dashboard",
         "/nominee/login-expired",
+        "/verify-email-expired",
       ],
     },
     sitemap: `${siteUrl}/sitemap.xml`,
