@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { organizations, users } from "@/db/schema";
-import { hashPassword, signSession, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/auth";
-import { cookies } from "next/headers";
+import { hashPassword } from "@/lib/auth";
+import { issueAndSendVerificationEmail } from "@/lib/email-verification";
 import { eq } from "drizzle-orm";
 
 const schema = z.object({
@@ -82,27 +82,24 @@ export async function POST(request: Request) {
       passwordHash,
       role: "organizer",
       organizationId: org[0].id,
+      // emailVerifiedAt stays null until they click the link we're about to
+      // send — no session is issued yet, so the account can't be used until then.
     })
     .returning();
 
-  const token = signSession({
+  const baseUrl = new URL(request.url).origin;
+  const { testMode } = await issueAndSendVerificationEmail({
     userId: user.id,
-    role: user.role,
-    organizationId: user.organizationId,
     email: user.email,
-  });
-
-  const store = await cookies();
-  store.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE,
+    fullName: user.fullName,
+    baseUrl,
   });
 
   return NextResponse.json({
-    user: { id: user.id, fullName: user.fullName, role: user.role },
-    organization: org[0],
+    status: "check_email",
+    email: user.email,
+    // Surfaced so the frontend can show the actual link when no email
+    // provider is configured yet (local/preview), instead of a dead end.
+    testMode,
   });
 }
