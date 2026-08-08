@@ -10,11 +10,15 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setNeedsVerification(false);
+    setResendStatus("idle");
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -25,6 +29,7 @@ export default function LoginPage() {
       const json = await res.json();
       if (!res.ok) {
         setError(json.error ?? "Something went wrong.");
+        if (json.code === "email_not_verified") setNeedsVerification(true);
         return;
       }
       const role = json.user.role;
@@ -32,6 +37,20 @@ export default function LoginPage() {
       router.refresh();
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function onResend() {
+    setResendStatus("sending");
+    try {
+      await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      setResendStatus("sent");
+    } catch {
+      setResendStatus("idle");
     }
   }
 
@@ -66,7 +85,23 @@ export default function LoginPage() {
           placeholder="••••••••"
           className="w-full rounded-xl border border-border-strong bg-background px-4 py-3 text-sm mb-5 outline-none focus:border-brand"
         />
-        {error && <p className="text-critical text-sm mb-4">{error}</p>}
+        {error && <p className="text-critical text-sm mb-2">{error}</p>}
+        {needsVerification && (
+          <div className="mb-4">
+            {resendStatus === "sent" ? (
+              <p className="text-sm text-good font-bold">Verification email sent — check your inbox.</p>
+            ) : (
+              <button
+                type="button"
+                onClick={onResend}
+                disabled={resendStatus === "sending"}
+                className="text-sm text-brand font-bold"
+              >
+                {resendStatus === "sending" ? "Sending…" : "Resend verification email"}
+              </button>
+            )}
+          </div>
+        )}
         <button type="submit" disabled={loading} className="btn btn-primary w-full">
           {loading ? "Signing in…" : "Sign In →"}
         </button>
