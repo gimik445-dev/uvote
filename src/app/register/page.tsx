@@ -1,18 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Logo } from "@/components/logo";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [organizationName, setOrganizationName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,11 +34,33 @@ export default function RegisterPage() {
         setError(json.error ?? "Something went wrong.");
         return;
       }
-      router.push("/dashboard/organizer");
-      router.refresh();
+      setSentTo(json.email ?? email);
     } finally {
       setLoading(false);
     }
+  }
+
+  if (sentTo) {
+    return (
+      <main className="flex-1 flex flex-col items-center justify-center px-5 py-16">
+        <div className="mb-6">
+          <Logo />
+        </div>
+        <div className="card p-8 w-full max-w-sm text-center">
+          <div className="text-3xl mb-4">📩</div>
+          <h1 className="text-xl font-extrabold mb-2">Check your email</h1>
+          <p className="text-sm text-ink-dim leading-relaxed">
+            We sent a verification link to <span className="font-bold text-ink">{sentTo}</span>.
+            Click it to confirm your address and finish setting up your account.
+          </p>
+          <p className="text-xs text-ink-mute mt-5">
+            Didn&apos;t get it? Check spam, or{" "}
+            <Link href="/login" className="text-brand font-bold">try signing in</Link>{" "}
+            once you&apos;ve verified.
+          </p>
+        </div>
+      </main>
+    );
   }
 
   return (
