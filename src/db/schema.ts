@@ -74,6 +74,9 @@ export const users = pgTable("users", {
   organizationId: uuid("organization_id").references(() => organizations.id, {
     onDelete: "set null",
   }),
+  // Null until the owner clicks the link emailed to them at registration —
+  // see emailVerificationTokens below. Login is blocked while this is null.
+  emailVerifiedAt: timestamp("email_verified_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -163,6 +166,26 @@ export const nomineeLoginTokens = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Email verification tokens — single-use links emailed to a new organizer
+// so they can prove they own the address before their account works, mirroring
+// nomineeLoginTokens above (random token, only its SHA-256 hash stored).
+// ---------------------------------------------------------------------------
+export const emailVerificationTokens = pgTable(
+  "email_verification_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("email_verification_tokens_user_idx").on(table.userId)]
+);
+
+// ---------------------------------------------------------------------------
 // Voter OTPs — a voter isn't a `users` row (see note above); to let them
 // look up their own vote history we prove phone ownership with a short-
 // lived one-time code texted to them, rather than a password. Only the
@@ -249,12 +272,23 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   payouts: many(payouts),
 }));
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [users.organizationId],
     references: [organizations.id],
   }),
+  emailVerificationTokens: many(emailVerificationTokens),
 }));
+
+export const emailVerificationTokensRelations = relations(
+  emailVerificationTokens,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [emailVerificationTokens.userId],
+      references: [users.id],
+    }),
+  })
+);
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
   organization: one(organizations, {
