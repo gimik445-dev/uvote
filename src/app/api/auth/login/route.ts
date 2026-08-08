@@ -35,6 +35,16 @@ export async function POST(request: Request) {
     );
   }
 
+  if (!user.emailVerifiedAt) {
+    return NextResponse.json(
+      {
+        error: "Please verify your email before signing in — check your inbox for the link we sent.",
+        code: "email_not_verified",
+      },
+      { status: 403 }
+    );
+  }
+
   const token = signSession({
     userId: user.id,
     role: user.role,
