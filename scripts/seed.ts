@@ -18,6 +18,9 @@ async function main() {
     email: "admin@uvote.app",
     passwordHash: await hashPassword("admin12345"),
     role: "platform_admin",
+    // Seeded accounts skip the email verification flow — there's no inbox
+    // behind these addresses to click a link from.
+    emailVerifiedAt: new Date(),
   });
 
   const [csDept] = await db
@@ -36,6 +39,7 @@ async function main() {
     passwordHash: await hashPassword("organizer123"),
     role: "organizer",
     organizationId: csDept.id,
+    emailVerifiedAt: new Date(),
   });
 
   console.log("Seed complete — no events created.");
