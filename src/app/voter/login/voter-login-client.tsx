@@ -4,10 +4,17 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 // How long the "Resend code" button stays disabled after a code is sent.
-// Long enough to discourage accidental double-sends (each one costs real
-// SMS credit), short enough that someone whose text is just slow to arrive
-// isn't stuck waiting.
-const RESEND_COOLDOWN_SECONDS = 30;
+// Delivery on our SMS route commonly takes a few minutes, so this is set
+// close to that rather than a snappy "instant SMS" assumption — long enough
+// that most people's first text has a real chance to land before they can
+// fire off a second one (each resend costs real SMS credit, and the old
+// code stays valid too — see the /api/voter/otp/verify route — so a resend
+// is never wasted, just ideally not the first move).
+const RESEND_COOLDOWN_SECONDS = 60;
+
+// After this long on the code screen with no code entered, we show a
+// reassurance message so people don't assume the text got lost and bail.
+const SLOW_DELIVERY_HINT_SECONDS = 45;
 
 export function VoterLoginClient() {
   const router = useRouter();
@@ -19,12 +26,20 @@ export function VoterLoginClient() {
   const [resending, setResending] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [showSlowHint, setShowSlowHint] = useState(false);
   // Only ever populated in test mode (no SMS provider configured yet) so
   // the flow can still be completed end-to-end without a real text — see
   // src/lib/sms.ts.
   const [devCode, setDevCode] = useState<string | null>(null);
 
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const slowHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function startSlowDeliveryHint() {
+    if (slowHintTimer.current) clearTimeout(slowHintTimer.current);
+    setShowSlowHint(false);
+    slowHintTimer.current = setTimeout(() => setShowSlowHint(true), SLOW_DELIVERY_HINT_SECONDS * 1000);
+  }
 
   function startResendCooldown() {
     if (cooldownTimer.current) clearInterval(cooldownTimer.current);
@@ -43,6 +58,7 @@ export function VoterLoginClient() {
   useEffect(() => {
     return () => {
       if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+      if (slowHintTimer.current) clearTimeout(slowHintTimer.current);
     };
   }, []);
 
@@ -69,10 +85,11 @@ export function VoterLoginClient() {
       setInfo(
         testMode
           ? "Test mode — no SMS account connected yet, so here's your code directly:"
-          : "We texted you a 6-digit code."
+          : "We texted you a 6-digit code. It can take a few minutes to arrive — hang tight."
       );
       setStep("code");
       startResendCooldown();
+      if (!testMode) startSlowDeliveryHint();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -86,13 +103,14 @@ export function VoterLoginClient() {
     setResending(true);
     try {
       const testMode = await sendCode();
-      setCode("");
       setInfo(
         testMode
           ? "New code — no SMS account connected yet, so here's your code directly:"
-          : "Sent — a new code is on its way."
+          : "Sent a new code. If your first text still shows up, that one still works too — use whichever arrives first."
       );
       startResendCooldown();
+      if (!testMode) startSlowDeliveryHint();
+      else setShowSlowHint(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't resend the code. Please try again.");
     } finally {
@@ -147,6 +165,12 @@ export function VoterLoginClient() {
   return (
     <form onSubmit={verifyCode} className="space-y-3">
       {info && <p className="text-xs text-ink-mute text-center">{info}</p>}
+      {showSlowHint && !devCode && (
+        <p className="text-xs text-ink-mute text-center">
+          Still nothing? Texts on some networks take a few minutes — worth waiting a bit longer
+          before resending.
+        </p>
+      )}
       {devCode && (
         <p className="text-center font-mono text-lg font-extrabold tracking-widest">{devCode}</p>
       )}
@@ -178,6 +202,10 @@ export function VoterLoginClient() {
       <button
         type="button"
         onClick={() => {
+          if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+          if (slowHintTimer.current) clearTimeout(slowHintTimer.current);
+          setShowSlowHint(false);
+          setResendCooldown(0);
           setStep("phone");
           setCode("");
           setError(null);
