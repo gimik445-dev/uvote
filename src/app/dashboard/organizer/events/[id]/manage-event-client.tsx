@@ -1,27 +1,41 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { getOrganizerEventDetail } from "@/lib/data";
+import { QrCodeCard } from "@/components/qr-code-card";
 
 type EventDetail = NonNullable<Awaited<ReturnType<typeof getOrganizerEventDetail>>>;
 
 export function ManageEventClient({ event }: { event: EventDetail }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [copyLabel, setCopyLabel] = useState("Copy voting link");
   const [coverError, setCoverError] = useState<string | null>(null);
   const [coverUploading, setCoverUploading] = useState(false);
+  const [showQr, setShowQr] = useState(false);
+  // Computed after mount (not during render) so server- and client-side
+  // markup match — window.location isn't available during SSR.
+  const [votingUrl, setVotingUrl] = useState<string | null>(null);
+  useEffect(() => {
+    setVotingUrl(`${window.location.origin}/events/${event.slug}`);
+  }, [event.slug]);
 
   async function setStatus(status: "draft" | "active" | "ended") {
     setBusy(true);
+    setStatusError(null);
     try {
       const res = await fetch(`/api/organizer/events/${event.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        setStatusError(json?.error ?? "Something went wrong updating the event status.");
+        return;
+      }
 
       if (status === "active") {
         // Going active is the "you're done setting this up" moment — send
@@ -32,6 +46,8 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
       } else {
         router.refresh();
       }
+    } catch {
+      setStatusError("Network error — please try again.");
     } finally {
       setBusy(false);
     }
@@ -46,6 +62,7 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
     }
     setCoverError(null);
     const reader = new FileReader();
+    reader.onerror = () => setCoverError("Couldn't read that photo — please try a different file.");
     reader.onload = async () => {
       setCoverUploading(true);
       try {
@@ -56,6 +73,8 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
         });
         if (res.ok) router.refresh();
         else setCoverError("Something went wrong uploading that photo.");
+      } catch {
+        setCoverError("Network error — please try again.");
       } finally {
         setCoverUploading(false);
       }
@@ -65,10 +84,13 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
 
   function copyLink() {
     const url = `${window.location.origin}/events/${event.slug}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopyLabel("Copied!");
-      setTimeout(() => setCopyLabel("Copy voting link"), 1800);
-    });
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        setCopyLabel("Copied!");
+        setTimeout(() => setCopyLabel("Copy voting link"), 1800);
+      })
+      .catch(() => setCopyLabel("Couldn't copy — copy manually"));
   }
 
   return (
@@ -95,6 +117,9 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
         <div className="flex gap-2 flex-wrap">
           <button onClick={copyLink} className="btn btn-ghost btn-sm">
             {copyLabel}
+          </button>
+          <button onClick={() => setShowQr((s) => !s)} className="btn btn-ghost btn-sm">
+            {showQr ? "Hide QR code" : "QR code"}
           </button>
           {event.status !== "active" && (
             <button
@@ -159,6 +184,27 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
         </div>
       )}
 
+      {statusError && (
+        <div className="card p-4 mb-6 border-l-4 border-l-critical text-sm text-critical">
+          {statusError}
+        </div>
+      )}
+
+      {showQr && (
+        <div className="card p-6 mb-6 flex flex-col items-center">
+          <h3 className="font-bold mb-1 self-start">Voting link QR code</h3>
+          <p className="text-xs text-ink-mute mb-4 self-start">
+            Print it on flyers or show it on a screen — scanning it opens the voting page
+            directly.
+          </p>
+          {votingUrl ? (
+            <QrCodeCard url={votingUrl} label="Scan to vote, or click to open the link" />
+          ) : (
+            <div className="text-xs text-ink-mute py-6">Loading…</div>
+          )}
+        </div>
+      )}
+
       <div className="space-y-6">
         {event.categories.map((category) => (
           <CategoryCard key={category.id} category={category} eventId={event.id} />
@@ -195,6 +241,7 @@ function CategoryCard({
       return;
     }
     const reader = new FileReader();
+    reader.onerror = () => setError("Couldn't read that photo — please try a different file.");
     reader.onload = () => setPhotoUrl(reader.result as string);
     reader.readAsDataURL(file);
   }
@@ -225,6 +272,8 @@ function CategoryCard({
       setPhotoUrl(null);
       setShowForm(false);
       router.refresh();
+    } catch {
+      setError("Network error — please try again.");
     } finally {
       setLoading(false);
     }
@@ -364,6 +413,8 @@ function AddCategoryForm({ eventId }: { eventId: string }) {
       }
       setName("");
       router.refresh();
+    } catch {
+      setError("Network error — please try again.");
     } finally {
       setLoading(false);
     }
