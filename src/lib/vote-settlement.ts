@@ -1,7 +1,20 @@
 import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { payments, nominees } from "@/db/schema";
+import { payments, nominees, paymentChannelEnum } from "@/db/schema";
 import { verifyTransaction } from "@/lib/paystack";
+
+const KNOWN_PAYMENT_CHANNELS = new Set<string>(paymentChannelEnum.enumValues);
+
+// Paystack's `channel` is a free-form string on their end, not a value we
+// control — Drizzle will throw if we ever try to save one that isn't in
+// our enum. Settling a payment (marking it paid, crediting the vote) must
+// never fail just because of an unrecognized/new channel label, so this
+// narrows to null instead of letting an unknown value reach the DB.
+function isKnownPaymentChannel(
+  channel: string | null
+): channel is (typeof paymentChannelEnum.enumValues)[number] {
+  return channel !== null && KNOWN_PAYMENT_CHANNELS.has(channel);
+}
 
 /**
  * The single choke point where a vote is ever recorded.
@@ -48,7 +61,12 @@ export async function settlePayment(reference: string): Promise<{
       .set({
         status: "success",
         verifiedAt: new Date(),
-        channel: (verified.channel as never) ?? undefined,
+        // Paystack's real channel values are a fixed, known set (card,
+        // mobile_money, ussd, bank, bank_transfer, qr, eft). Anything
+        // outside what our enum recognizes is stored as null rather than
+        // thrown at the DB layer — a payment must never fail to settle
+        // just because of an unrecognized channel label.
+        channel: isKnownPaymentChannel(verified.channel) ? verified.channel : null,
       })
       .where(
         and(
