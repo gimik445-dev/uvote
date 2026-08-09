@@ -28,6 +28,7 @@ export default function NewEventPage() {
     }
     setError(null);
     const reader = new FileReader();
+    reader.onerror = () => setError("Couldn't read that photo — please try a different file.");
     reader.onload = () => setCoverImageUrl(reader.result as string);
     reader.readAsDataURL(file);
   }
@@ -56,6 +57,8 @@ export default function NewEventPage() {
         return;
       }
       router.push(`/dashboard/organizer/events/${json.event.id}`);
+    } catch {
+      setError("Network error — please try again.");
     } finally {
       setLoading(false);
     }
