@@ -35,6 +35,8 @@ export function SettingsForm({
       }
       setSaved(true);
       router.refresh();
+    } catch {
+      setError("Network error — please try again.");
     } finally {
       setLoading(false);
     }
