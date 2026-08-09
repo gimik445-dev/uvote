@@ -10,13 +10,28 @@ import {
   SESSION_COOKIE,
   SESSION_MAX_AGE,
 } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 });
 
+// Caps password-guessing attempts per IP. Keyed by IP only (not email) so
+// one attacker can't just rotate target emails to dodge the limit.
+const LOGIN_LIMIT = 10;
+const LOGIN_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const { allowed, retryAfterMs } = checkRateLimit(`login:${ip}`, LOGIN_LIMIT, LOGIN_WINDOW_MS);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many login attempts — please wait a few minutes and try again." },
+      { status: 429, headers: { "Retry-After": Math.ceil(retryAfterMs / 1000).toString() } }
+    );
+  }
+
   const body = await request.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
