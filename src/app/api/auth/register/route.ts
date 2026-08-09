@@ -4,7 +4,13 @@ import { db } from "@/db";
 import { organizations, users } from "@/db/schema";
 import { hashPassword } from "@/lib/auth";
 import { issueAndSendVerificationEmail } from "@/lib/email-verification";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { eq } from "drizzle-orm";
+
+// Caps signups per IP — stops a script from mass-creating accounts /
+// burning verification emails.
+const REGISTER_LIMIT = 8;
+const REGISTER_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 const schema = z.object({
   fullName: z.string().min(2).max(200),
@@ -27,6 +33,15 @@ function slugify(input: string): string {
 }
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const { allowed, retryAfterMs } = checkRateLimit(`register:${ip}`, REGISTER_LIMIT, REGISTER_WINDOW_MS);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many signup attempts — please wait a while and try again." },
+      { status: 429, headers: { "Retry-After": Math.ceil(retryAfterMs / 1000).toString() } }
+    );
+  }
+
   const body = await request.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
