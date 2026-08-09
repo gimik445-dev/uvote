@@ -13,23 +13,33 @@ import { useEffect, useRef, useState } from "react";
 const RESEND_COOLDOWN_SECONDS = 60;
 
 // After this long on the code screen with no code entered, we show a
-// reassurance message so people don't assume the text got lost and bail.
+// reassurance message so people don't assume the text got lost and bail —
+// and, alongside it, offer a voice-call fallback (see channel state below).
 const SLOW_DELIVERY_HINT_SECONDS = 45;
+
+// Which delivery channel the currently-live code was sent through. This
+// picks which pair of API routes requestCode/verifyCode below talk to —
+// the SMS pair (src/app/api/voter/otp/{request,verify}) or the voice pair
+// (src/app/api/voter/otp/voice-{request,verify}) — since a voice-delivered
+// code is verified differently under the hood (see voice-verify/route.ts).
+type Channel = "sms" | "voice";
 
 export function VoterLoginClient() {
   const router = useRouter();
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
+  const [channel, setChannel] = useState<Channel>("sms");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [callingVoice, setCallingVoice] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [showSlowHint, setShowSlowHint] = useState(false);
   // Only ever populated in test mode (no SMS provider configured yet) so
-  // the flow can still be completed end-to-end without a real text — see
-  // src/lib/sms.ts.
+  // the flow can still be completed end-to-end without a real text or
+  // call — see src/lib/sms.ts and src/lib/arkesel-otp.ts.
   const [devCode, setDevCode] = useState<string | null>(null);
 
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -82,6 +92,7 @@ export function VoterLoginClient() {
     setLoading(true);
     try {
       const testMode = await sendCode();
+      setChannel("sms");
       setInfo(
         testMode
           ? "Test mode — no SMS account connected yet, so here's your code directly:"
@@ -103,6 +114,7 @@ export function VoterLoginClient() {
     setResending(true);
     try {
       const testMode = await sendCode();
+      setChannel("sms");
       setInfo(
         testMode
           ? "New code — no SMS account connected yet, so here's your code directly:"
@@ -118,12 +130,49 @@ export function VoterLoginClient() {
     }
   }
 
+  // Voice fallback — offered once the slow-delivery hint shows. Places an
+  // actual phone call that reads the code aloud instead of texting it,
+  // through the same Arkesel account but a different, hosted OTP flow (see
+  // src/lib/arkesel-otp.ts for why that means a different verify route too).
+  async function callInstead() {
+    if (callingVoice) return;
+    setError(null);
+    setCallingVoice(true);
+    try {
+      const res = await fetch("/api/voter/otp/voice-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error ?? "Couldn't place the call.");
+      }
+      setChannel("voice");
+      setCode("");
+      setDevCode(json.testMode ? json.devCode : null);
+      setInfo(
+        json.testMode
+          ? "Test mode — no voice account connected yet, so here's your code directly:"
+          : "Calling you now — answer and listen for the 6-digit code."
+      );
+      setShowSlowHint(false);
+      if (slowHintTimer.current) clearTimeout(slowHintTimer.current);
+      startResendCooldown();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't place the call. Please try again.");
+    } finally {
+      setCallingVoice(false);
+    }
+  }
+
   async function verifyCode(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch("/api/voter/otp/verify", {
+      const endpoint = channel === "voice" ? "/api/voter/otp/voice-verify" : "/api/voter/otp/verify";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, code }),
@@ -165,11 +214,21 @@ export function VoterLoginClient() {
   return (
     <form onSubmit={verifyCode} className="space-y-3">
       {info && <p className="text-xs text-ink-mute text-center">{info}</p>}
-      {showSlowHint && !devCode && (
-        <p className="text-xs text-ink-mute text-center">
-          Still nothing? Texts on some networks take a few minutes — worth waiting a bit longer
-          before resending.
-        </p>
+      {showSlowHint && !devCode && channel === "sms" && (
+        <div className="text-center space-y-1.5">
+          <p className="text-xs text-ink-mute">
+            Still nothing? Texts on some networks take a few minutes — worth waiting a bit longer
+            before resending.
+          </p>
+          <button
+            type="button"
+            onClick={callInstead}
+            disabled={callingVoice}
+            className="text-xs font-bold text-brand disabled:opacity-60"
+          >
+            {callingVoice ? "Calling…" : "Or call me with my code instead"}
+          </button>
+        </div>
       )}
       {devCode && (
         <p className="text-center font-mono text-lg font-extrabold tracking-widest">{devCode}</p>
@@ -187,18 +246,34 @@ export function VoterLoginClient() {
       <button type="submit" disabled={loading} className="btn btn-primary btn-sm w-full">
         {loading ? "Checking…" : "Log in"}
       </button>
-      <button
-        type="button"
-        onClick={resendCode}
-        disabled={resendCooldown > 0 || resending}
-        className="text-xs text-ink-mute w-full text-center disabled:opacity-60"
-      >
-        {resending
-          ? "Resending…"
-          : resendCooldown > 0
-            ? `Didn't get it? Resend code in ${resendCooldown}s`
-            : "Didn't get it? Resend code"}
-      </button>
+      {channel === "sms" && (
+        <button
+          type="button"
+          onClick={resendCode}
+          disabled={resendCooldown > 0 || resending}
+          className="text-xs text-ink-mute w-full text-center disabled:opacity-60"
+        >
+          {resending
+            ? "Resending…"
+            : resendCooldown > 0
+              ? `Didn't get it? Resend code in ${resendCooldown}s`
+              : "Didn't get it? Resend code"}
+        </button>
+      )}
+      {channel === "voice" && (
+        <button
+          type="button"
+          onClick={callInstead}
+          disabled={resendCooldown > 0 || callingVoice}
+          className="text-xs text-ink-mute w-full text-center disabled:opacity-60"
+        >
+          {callingVoice
+            ? "Calling…"
+            : resendCooldown > 0
+              ? `Didn't get the call? Call again in ${resendCooldown}s`
+              : "Didn't get the call? Call again"}
+        </button>
+      )}
       <button
         type="button"
         onClick={() => {
@@ -206,6 +281,7 @@ export function VoterLoginClient() {
           if (slowHintTimer.current) clearTimeout(slowHintTimer.current);
           setShowSlowHint(false);
           setResendCooldown(0);
+          setChannel("sms");
           setStep("phone");
           setCode("");
           setError(null);
