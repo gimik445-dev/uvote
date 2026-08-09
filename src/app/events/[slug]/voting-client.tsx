@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 // Deliberately no voteCount here — voters never see how many votes a
@@ -153,6 +153,16 @@ function VoteModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // If the voter closes this modal while checkout is still in flight, the
+  // fetch must not be allowed to land afterward and redirect them to
+  // Paystack anyway — that's a payment they never confirmed they still
+  // wanted. Aborting on unmount, and ignoring the resulting AbortError,
+  // makes "close" actually cancel the checkout rather than just hiding it.
+  const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
+
   const votes = customVotes ? Math.max(1, parseInt(customVotes) || 0) : packVotes;
   const total = (votes * Number(event.pricePerVote)).toFixed(2);
 
@@ -163,11 +173,14 @@ function VoteModal({
       return;
     }
     setLoading(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       const res = await fetch(`/api/events/${event.slug}/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nomineeId: nominee.id, voteCount: votes, phone }),
+        signal: controller.signal,
       });
       const json = await res.json();
       if (!res.ok) {
@@ -176,7 +189,10 @@ function VoteModal({
         return;
       }
       window.location.href = json.authorizationUrl;
-    } catch {
+    } catch (err) {
+      // Modal was closed mid-request — the voter already backed out, so
+      // silently drop this rather than showing an error or navigating.
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setError("Network error — please try again.");
       setLoading(false);
     }
