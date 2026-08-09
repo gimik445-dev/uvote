@@ -35,6 +35,8 @@ export default function RegisterPage() {
         return;
       }
       setSentTo(json.email ?? email);
+    } catch {
+      setError("Network error — please try again.");
     } finally {
       setLoading(false);
     }
