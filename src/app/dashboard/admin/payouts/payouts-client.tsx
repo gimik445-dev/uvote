@@ -54,6 +54,8 @@ export function PayoutsClient({
         return;
       }
       router.refresh();
+    } catch {
+      setError("Network error — please try again.");
     } finally {
       setBusyId(null);
     }
@@ -74,6 +76,8 @@ export function PayoutsClient({
         return;
       }
       router.refresh();
+    } catch {
+      setError("Network error — please try again.");
     } finally {
       setBusyId(null);
     }
