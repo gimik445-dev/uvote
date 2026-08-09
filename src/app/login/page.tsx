@@ -35,6 +35,8 @@ export default function LoginPage() {
       const role = json.user.role;
       router.push(role === "platform_admin" ? "/dashboard/admin" : "/dashboard/organizer");
       router.refresh();
+    } catch {
+      setError("Network error — please try again.");
     } finally {
       setLoading(false);
     }
