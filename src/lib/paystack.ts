@@ -137,5 +137,14 @@ export async function verifyWebhookSignature(
     .update(rawBody)
     .digest("hex");
 
-  return hash === signature;
+  // Constant-time comparison — a plain `===` short-circuits on the first
+  // mismatched byte, which leaks timing information an attacker could use
+  // to guess the correct signature one byte at a time. Both hex digests
+  // are a fixed 128 chars (sha512), but timingSafeEqual still requires
+  // equal-length buffers, so guard that explicitly first.
+  const hashBuf = Buffer.from(hash, "hex");
+  const signatureBuf = Buffer.from(signature, "hex");
+  if (hashBuf.length !== signatureBuf.length) return false;
+
+  return crypto.timingSafeEqual(hashBuf, signatureBuf);
 }
