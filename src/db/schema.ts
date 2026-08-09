@@ -38,6 +38,11 @@ export const paymentChannelEnum = pgEnum("payment_channel", [
   "mtn_momo",
   "telecel_cash",
   "ussd",
+  // Paystack reports mobile money charges (MTN, Telecel, AirtelTigo, etc.)
+  // under this single channel value regardless of network — the
+  // network-specific values above are unused by real Paystack responses,
+  // kept only for backwards compatibility with any existing rows.
+  "mobile_money",
 ]);
 
 export const payoutStatusEnum = pgEnum("payout_status", [
