@@ -191,6 +191,28 @@ export const emailVerificationTokens = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Password reset tokens — single-use links emailed to a user who forgot
+// their password, mirroring emailVerificationTokens above (random token,
+// only its SHA-256 hash stored). Kept as a separate table rather than
+// reusing emailVerificationTokens so the two flows can have different
+// lifetimes and can't be replayed against each other.
+// ---------------------------------------------------------------------------
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("password_reset_tokens_user_idx").on(table.userId)]
+);
+
+// ---------------------------------------------------------------------------
 // Voter OTPs — a voter isn't a `users` row (see note above); to let them
 // look up their own vote history we prove phone ownership with a short-
 // lived one-time code texted to them, rather than a password. Only the
@@ -283,6 +305,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     references: [organizations.id],
   }),
   emailVerificationTokens: many(emailVerificationTokens),
+  passwordResetTokens: many(passwordResetTokens),
 }));
 
 export const emailVerificationTokensRelations = relations(
@@ -290,6 +313,16 @@ export const emailVerificationTokensRelations = relations(
   ({ one }) => ({
     user: one(users, {
       fields: [emailVerificationTokens.userId],
+      references: [users.id],
+    }),
+  })
+);
+
+export const passwordResetTokensRelations = relations(
+  passwordResetTokens,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [passwordResetTokens.userId],
       references: [users.id],
     }),
   })
