@@ -1,0 +1,1 @@
+ALTER TYPE "public"."payment_channel" ADD VALUE 'mobile_money';
