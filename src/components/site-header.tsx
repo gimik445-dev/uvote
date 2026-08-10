@@ -1,9 +1,18 @@
 import Link from "next/link";
 import { Logo } from "./logo";
+import { ThemeToggle } from "./theme-toggle";
 
 export function SiteHeader() {
   return (
-    <header className="border-b border-border">
+    <header
+      className="sticky top-0 z-30 border-b"
+      style={{
+        background: "var(--glass-bg-strong)",
+        borderColor: "var(--glass-border)",
+        backdropFilter: "blur(24px) saturate(160%)",
+        WebkitBackdropFilter: "blur(24px) saturate(160%)",
+      }}
+    >
       <div className="max-w-6xl mx-auto px-6 py-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex justify-center sm:justify-start">
           <Logo />
@@ -21,6 +30,7 @@ export function SiteHeader() {
             both or neither depending on caching/zoom/viewport edge cases.
             One element with no breakpoint logic can't ever double up. */}
         <div className="flex items-center justify-between gap-2 w-full sm:w-auto sm:justify-end">
+          <ThemeToggle />
           <Link
             href="/voter/login"
             className="btn btn-ghost btn-sm flex-1 sm:flex-none px-4 sm:px-6 whitespace-nowrap"
