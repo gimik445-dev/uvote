@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Logo } from "@/components/logo";
+import { PasswordInput } from "@/components/password-input";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -76,16 +77,21 @@ export default function LoginPage() {
           placeholder="you@gmail.com"
           className="w-full rounded-xl border border-border-strong bg-background px-4 py-3 text-sm mb-4 outline-none focus:border-brand"
         />
-        <label className="block text-[11px] font-extrabold tracking-wide text-ink-mute uppercase mb-2">
-          Password
-        </label>
-        <input
-          type="password"
-          required
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-[11px] font-extrabold tracking-wide text-ink-mute uppercase">
+            Password
+          </label>
+          <Link href="/forgot-password" className="text-[11px] font-bold text-brand">
+            Forgot password?
+          </Link>
+        </div>
+        <PasswordInput
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={setPassword}
           placeholder="••••••••"
-          className="w-full rounded-xl border border-border-strong bg-background px-4 py-3 text-sm mb-5 outline-none focus:border-brand"
+          required
+          className="mb-5"
+          inputClassName="w-full rounded-xl border border-border-strong bg-background px-4 py-3 text-sm outline-none focus:border-brand"
         />
         {error && <p className="text-critical text-sm mb-2">{error}</p>}
         {needsVerification && (
