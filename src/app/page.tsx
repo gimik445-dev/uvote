@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getActiveEvents } from "@/lib/data";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { EventCarousel } from "@/components/event-carousel";
 
 // This page queries the DB directly with no auth/cookie check in the render
 // path, so without this Next tries to statically prerender it — meaning
@@ -44,47 +45,7 @@ export default async function LandingPage() {
             No events are live right now — check back soon.
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {events.map((event) => (
-              <Link
-                key={event.id}
-                href={`/events/${event.slug}`}
-                className="card overflow-hidden hover:border-brand transition-colors"
-              >
-                <div
-                  className={`h-28 flex items-start justify-between px-5 pt-4 relative ${
-                    event.coverImageUrl ? "bg-cover bg-center" : "bg-gradient-to-br from-brand/10 to-accent/10"
-                  }`}
-                  style={event.coverImageUrl ? { backgroundImage: `url(${event.coverImageUrl})` } : undefined}
-                >
-                  {event.coverImageUrl && (
-                    <div
-                      className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/45"
-                      aria-hidden="true"
-                    />
-                  )}
-                  {!event.coverImageUrl && <span className="text-4xl">{event.coverEmoji}</span>}
-                  <span className="badge badge-good relative ml-auto">Active</span>
-                </div>
-                <div className="p-5">
-                  <h3 className="font-bold mb-1.5">{event.title}</h3>
-                  <p className="text-sm text-ink-dim mb-4 line-clamp-2 min-h-[40px]">
-                    {event.description}
-                  </p>
-                  <div className="flex justify-between text-xs border-t border-border pt-3 text-ink-mute">
-                    <div>
-                      USSD Code
-                      <div className="text-ink font-semibold mt-0.5">{event.ussdCode ?? "—"}</div>
-                    </div>
-                    <div>
-                      By
-                      <div className="text-ink font-semibold mt-0.5">{event.organization.name}</div>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <EventCarousel events={events} />
         )}
       </section>
 
