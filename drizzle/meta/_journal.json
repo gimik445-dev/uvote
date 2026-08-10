@@ -43,6 +43,13 @@
       "when": 1786301197301,
       "tag": "0005_common_george_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786316905052,
+      "tag": "0006_public_mister_sinister",
+      "breakpoints": true
     }
   ]
 }
