@@ -112,11 +112,24 @@ function StructuredData() {
   );
 }
 
+// Runs before first paint (plain inline <script>, not next/script — this
+// one has to block) so the page never flashes light-then-dark or
+// dark-then-light. Reads the same localStorage key theme-toggle.tsx
+// writes to; falls back to the OS preference for "system" or first visit.
+const noFlashThemeScript = `(function(){try{
+  var m = localStorage.getItem('uvote-theme') || 'system';
+  var dark = m === 'dark' || (m === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark', dark);
+  document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+} catch (e) {}})();`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <head>
         <StructuredData />
+        {/* eslint-disable-next-line react/no-danger -- static script, no user input */}
+        <script dangerouslySetInnerHTML={{ __html: noFlashThemeScript }} />
       </head>
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
