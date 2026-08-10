@@ -123,7 +123,14 @@ export function ThemeToggle() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-32 rounded-2xl border p-1.5 z-50 shadow-lg"
+          // Anchored left-0 by default: in the site header's mobile layout
+          // (below sm) this toggle is the first item in a full-width row,
+          // sitting right at the left edge of the screen — a right-0 menu
+          // there would extend off-screen to the left and be unreachable.
+          // At sm+ the header switches to justify-end (button group hugs
+          // the right edge), so the menu flips to right-0 there, matching
+          // the same breakpoint the header uses.
+          className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-32 rounded-2xl border p-1.5 z-50 shadow-lg"
           style={{
             background: "var(--glass-bg-strong)",
             borderColor: "var(--glass-border)",
