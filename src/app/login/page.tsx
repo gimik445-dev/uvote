@@ -119,9 +119,6 @@ export default function LoginPage() {
             Register your organization
           </Link>
         </p>
-        <p className="text-center text-xs text-ink-mute mt-4">
-          Demo: organizer@uvote.app / organizer123 · admin@uvote.app / admin12345
-        </p>
       </form>
     </main>
   );
