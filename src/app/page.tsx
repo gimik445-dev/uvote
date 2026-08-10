@@ -3,6 +3,14 @@ import { getActiveEvents } from "@/lib/data";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
+// This page queries the DB directly with no auth/cookie check in the render
+// path, so without this Next tries to statically prerender it — meaning
+// every production BUILD (not just every request) needs a live DB
+// connection, and the live-events list gets frozen at build time until the
+// next deploy. Forcing it dynamic renders per-request instead: no build-time
+// DB dependency, and the events list is always current.
+export const dynamic = "force-dynamic";
+
 export default async function LandingPage() {
   const events = await getActiveEvents();
 
