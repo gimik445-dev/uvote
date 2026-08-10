@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SignOutButton } from "./sign-out-button";
 import { Logo } from "./logo";
+import { ThemeToggle } from "./theme-toggle";
 
 export function DashboardShell({
   activeLabel,
@@ -17,9 +18,18 @@ export function DashboardShell({
 }) {
   return (
     <div className="flex min-h-screen">
-      <aside className="w-[230px] shrink-0 border-r border-border bg-surface p-4 hidden md:block">
-        <div className="px-2 mb-6">
+      <aside
+        className="w-[230px] shrink-0 border-r p-4 hidden md:block"
+        style={{
+          background: "var(--glass-bg)",
+          borderColor: "var(--glass-border)",
+          backdropFilter: "blur(24px) saturate(160%)",
+          WebkitBackdropFilter: "blur(24px) saturate(160%)",
+        }}
+      >
+        <div className="px-2 mb-6 flex items-center justify-between">
           <Logo size="sm" />
+          <ThemeToggle />
         </div>
         {links.map((l) => (
           <Link
@@ -33,7 +43,10 @@ export function DashboardShell({
             {l.label}
           </Link>
         ))}
-        <div className="mt-6 p-3 rounded-xl bg-background text-xs">
+        <div
+          className="mt-6 p-3 rounded-xl text-xs border"
+          style={{ background: "var(--glass-bg-strong)", borderColor: "var(--glass-border)" }}
+        >
           <div className="font-bold text-ink-dim mb-0.5">{identityLabel}</div>
           <div className="text-ink-mute">{roleLabel}</div>
           <SignOutButton />
