@@ -188,7 +188,11 @@ function Slide({ event, active }: { event: Event; active: boolean }) {
       aria-hidden={!active}
     >
       <div
-        className={`h-64 sm:h-80 flex flex-col justify-end px-6 py-6 sm:px-9 sm:py-8 relative overflow-hidden ${
+        // h-72 (not h-64) on mobile — the serif display font is wider/bolder
+        // than the old sans stack, so a title that fit on one line before
+        // can wrap to two now; the extra height keeps a wrapped title clear
+        // of the emoji/Active badge pinned to the top corners.
+        className={`h-72 sm:h-80 flex flex-col justify-end px-6 py-6 sm:px-9 sm:py-8 relative overflow-hidden ${
           event.coverImageUrl ? "bg-cover bg-center" : "bg-gradient-to-br from-brand to-brand-dark"
         }`}
         style={event.coverImageUrl ? { backgroundImage: `url(${event.coverImageUrl})` } : undefined}
