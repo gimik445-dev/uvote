@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Logo } from "@/components/logo";
+import { PasswordInput } from "@/components/password-input";
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
@@ -90,9 +91,14 @@ export default function RegisterPage() {
             placeholder="amaboateng@gmail.com" className="input" />
         </Field>
         <Field label="Password" last>
-          <input type="password" required minLength={8} value={password}
-            onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters"
-            className="input" />
+          <PasswordInput
+            value={password}
+            onChange={setPassword}
+            placeholder="At least 8 characters"
+            required
+            minLength={8}
+            inputClassName="input"
+          />
         </Field>
         {error && <p className="text-critical text-sm mb-4">{error}</p>}
         <button type="submit" disabled={loading} className="btn btn-primary w-full">
