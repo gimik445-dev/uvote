@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/* Serif display face for headings — self-hosted via @fontsource (static
+   files bundled at build time) rather than next/font/google, since that
+   fetches from fonts.googleapis.com at build time and this environment
+   can't reach it. Self-hosting also means no third-party request from the
+   visitor's browser either. */
+@import "@fontsource/fraunces/600.css";
+@import "@fontsource/fraunces/700.css";
+
+/* Subtle cross-fade between page navigations in browsers that support the
+   View Transitions API (Chrome/Edge as of this writing) — a no-op
+   progressive enhancement everywhere else, no JS required. */
+@view-transition {
+  navigation: auto;
+}
+
 :root {
   --background: #eef5ff;
   --surface: #ffffff;
@@ -47,6 +62,7 @@
   --color-critical-bg: var(--critical-bg);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: "Fraunces", Georgia, serif;
 }
 
 body {
@@ -54,10 +70,19 @@ body {
   color: var(--ink);
 }
 
+/* Serif display face on every heading level, sitewide — body copy,
+   buttons, badges and form labels stay on the sans stack. Matches the
+   editorial big-serif-headline / sans-everything-else pattern from the
+   SwiftVote redesign reference, applied as a single global rule instead
+   of per-page classes so it reskins the whole site at once. */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 22px;
 }
 
 .btn {
@@ -66,10 +91,10 @@ body {
   justify-content: center;
   gap: 8px;
   font-weight: 700;
-  border-radius: 12px;
-  padding: 12px 20px;
+  border-radius: 999px;
+  padding: 12px 22px;
   font-size: 14.5px;
-  transition: transform 0.05s ease, opacity 0.15s ease;
+  transition: transform 0.05s ease, opacity 0.15s ease, background-color 0.15s ease;
 }
 .btn:active {
   transform: scale(0.98);
@@ -97,9 +122,9 @@ body {
   background: var(--background);
 }
 .btn-sm {
-  padding: 9px 14px;
+  padding: 9px 16px;
   font-size: 13px;
-  border-radius: 10px;
+  border-radius: 999px;
 }
 .btn:disabled {
   opacity: 0.55;
