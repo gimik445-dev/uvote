@@ -115,10 +115,13 @@ function StructuredData() {
 // Runs before first paint (plain inline <script>, not next/script — this
 // one has to block) so the page never flashes light-then-dark or
 // dark-then-light. Reads the same localStorage key theme-toggle.tsx
-// writes to; falls back to the OS preference for "system" or first visit.
+// writes to. Only 'light' is ever stored explicitly — anything else
+// (missing key, or a leftover 'dark'/'system' value from an earlier
+// version of the toggle) falls back to the OS preference, matching
+// theme-toggle.tsx's own getSnapshot().
 const noFlashThemeScript = `(function(){try{
-  var m = localStorage.getItem('uvote-theme') || 'system';
-  var dark = m === 'dark' || (m === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  var forcedLight = localStorage.getItem('uvote-theme') === 'light';
+  var dark = !forcedLight && window.matchMedia('(prefers-color-scheme: dark)').matches;
   document.documentElement.classList.toggle('dark', dark);
   document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
 } catch (e) {}})();`;
