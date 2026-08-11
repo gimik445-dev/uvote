@@ -4,10 +4,13 @@ import { nomineeLoginTokens } from "@/db/schema";
 import { generateLoginToken, LOGIN_TOKEN_TTL_DAYS } from "./nominee-auth";
 import { sendSms } from "./sms";
 
-// Issues a fresh single-use login token for a nominee and texts them the
-// link. Called automatically right after an organizer adds a nominee (with
-// a phone number), and again from the "Resend link" button if a nominee
-// says they never got it or the link expired.
+// Issues a fresh, reusable login token for a nominee and texts them the
+// link — see src/app/api/nominee/login/[token]/route.ts for why it's
+// reusable rather than single-use, and how its effective expiry extends to
+// the nominee's event end date. Called automatically right after an
+// organizer adds a nominee (with a phone number), and again from the
+// "Resend link" button if a nominee says they never got it or the link
+// expired.
 export async function issueAndSendLoginLink(params: {
   nomineeId: string;
   phone: string;
@@ -31,3 +34,4 @@ export async function issueAndSendLoginLink(params: {
     message: `Hi ${firstName}, view your live uVote results here: ${link}`,
   });
 }
+
