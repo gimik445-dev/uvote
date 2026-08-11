@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
-type Mode = "light" | "dark" | "system";
+type Mode = "light" | "system";
 
 const STORAGE_KEY = "uvote-theme";
 
-const MODES: { value: Mode; label: string; icon: string }[] = [
-  { value: "light", label: "Light", icon: "☀️" },
-  { value: "dark", label: "Dark", icon: "🌙" },
-  { value: "system", label: "System", icon: "🖥️" },
-];
+const ICONS: Record<Mode, string> = {
+  light: "☀️",
+  system: "🖥️",
+};
+
+const LABELS: Record<Mode, string> = {
+  light: "Light",
+  system: "System",
+};
 
 // Tiny external store over localStorage[STORAGE_KEY] — read via
 // useSyncExternalStore rather than "read in an effect + setState" so the
@@ -21,8 +25,15 @@ const MODES: { value: Mode; label: string; icon: string }[] = [
 // anti-pattern.
 const listeners = new Set<() => void>();
 
+// Only "light" is ever explicitly stored. Anything else — no key, or a
+// leftover "dark"/"system" value from an earlier version of this toggle —
+// is treated as "follow the system". There used to be a separate Dark
+// option, but on a device whose OS is already in dark mode it was pixel-
+// identical to System, so it was just a second name for the same look;
+// dropping it leaves the two states that are actually different: always
+// light, or match the device.
 function getSnapshot(): Mode {
-  return (localStorage.getItem(STORAGE_KEY) as Mode | null) ?? "system";
+  return localStorage.getItem(STORAGE_KEY) === "light" ? "light" : "system";
 }
 
 function getServerSnapshot(): Mode {
@@ -39,7 +50,11 @@ function subscribe(callback: () => void) {
 }
 
 function setStoredMode(next: Mode) {
-  localStorage.setItem(STORAGE_KEY, next);
+  if (next === "light") {
+    localStorage.setItem(STORAGE_KEY, "light");
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
   listeners.forEach((l) => l());
 }
 
@@ -48,19 +63,16 @@ function systemPrefersDark() {
 }
 
 function applyTheme(mode: Mode) {
-  const dark = mode === "dark" || (mode === "system" && systemPrefersDark());
+  const dark = mode === "system" && systemPrefersDark();
   document.documentElement.classList.toggle("dark", dark);
   document.documentElement.style.colorScheme = dark ? "dark" : "light";
 }
 
-// Small appearance switcher — hover (mouse) or tap (touch) opens a compact
-// Light / Dark / System menu. The inline no-flash script in layout.tsx
-// sets the class before first paint using whatever's already in
-// localStorage; this component takes over from there.
+// Small appearance switcher. With only two states left there's no need for
+// a dropdown to pick from — the button itself shows the current mode, and
+// a click flips straight to the other one and applies it immediately.
 export function ThemeToggle() {
   const mode = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
 
   // Mirror the resolved mode onto <html> whenever it changes, and keep it
   // correct if the OS-level scheme flips while "system" is selected. This
@@ -75,85 +87,22 @@ export function ThemeToggle() {
     return () => mq.removeEventListener("change", onChange);
   }, [mode]);
 
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("click", onDocClick);
-    return () => document.removeEventListener("click", onDocClick);
-  }, []);
-
-  function choose(next: Mode) {
-    setStoredMode(next);
-    setOpen(false);
-  }
-
-  const current = MODES.find((m) => m.value === mode) ?? MODES[2];
+  const next: Mode = mode === "light" ? "system" : "light";
 
   return (
-    <div
-      ref={rootRef}
-      className="relative"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+    <button
+      type="button"
+      aria-label={`Appearance: ${LABELS[mode]}. Click to switch to ${LABELS[next]}.`}
+      title={`Appearance: ${LABELS[mode]} — click for ${LABELS[next]}`}
+      onClick={() => setStoredMode(next)}
+      className="w-9 h-9 rounded-full flex items-center justify-center text-sm border transition-colors"
+      style={{
+        background: "var(--glass-bg)",
+        borderColor: "var(--glass-border)",
+        backdropFilter: "blur(16px)",
+      }}
     >
-      <button
-        type="button"
-        aria-label="Appearance"
-        aria-expanded={open}
-        onClick={(e) => {
-          // Not a toggle: on desktop, onMouseEnter above has usually
-          // already opened this by the time a click lands, and flipping
-          // an already-open menu closed on click would close it before a
-          // mouse user can pick an option. Always opening here is a no-op
-          // in that case and is what actually opens it for touch, where
-          // hover never fires.
-          e.stopPropagation();
-          setOpen(true);
-        }}
-        className="w-9 h-9 rounded-full flex items-center justify-center text-sm border transition-colors"
-        style={{
-          background: "var(--glass-bg)",
-          borderColor: "var(--glass-border)",
-          backdropFilter: "blur(16px)",
-        }}
-      >
-        {current.icon}
-      </button>
-      {open && (
-        <div
-          role="menu"
-          // Anchored left-0 by default: in the site header's mobile layout
-          // (below sm) this toggle is the first item in a full-width row,
-          // sitting right at the left edge of the screen — a right-0 menu
-          // there would extend off-screen to the left and be unreachable.
-          // At sm+ the header switches to justify-end (button group hugs
-          // the right edge), so the menu flips to right-0 there, matching
-          // the same breakpoint the header uses.
-          className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-32 rounded-2xl border p-1.5 z-50 shadow-lg"
-          style={{
-            background: "var(--glass-bg-strong)",
-            borderColor: "var(--glass-border)",
-            backdropFilter: "blur(24px) saturate(160%)",
-          }}
-        >
-          {MODES.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              role="menuitemradio"
-              aria-checked={mode === m.value}
-              onClick={() => choose(m.value)}
-              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-left transition-colors ${
-                mode === m.value ? "bg-brand/15 text-brand" : "text-ink-dim hover:bg-brand/5"
-              }`}
-            >
-              <span>{m.icon}</span>
-              {m.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+      {ICONS[mode]}
+    </button>
   );
 }
