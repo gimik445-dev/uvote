@@ -70,11 +70,15 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   verification: {
-    // Proves ownership to Google Search Console (URL-prefix property for
-    // uvote-three.vercel.app) so the sitemap can be submitted. Safe to
-    // publish — this token only proves control of the page, it can't be
-    // used to take any action on the site or the Search Console account.
-    google: "2NbNU1j1xCrJRvboyEWCWMg8UJ56GMR2ex9xG2vRfz8",
+    // Proves ownership to Google Search Console — one token per property
+    // (the old uvote-three.vercel.app property, plus the real uvote.online
+    // domain) so the sitemap can be submitted for both. Safe to publish —
+    // these tokens only prove control of the page, they can't be used to
+    // take any action on the site or the Search Console account.
+    google: [
+      "2NbNU1j1xCrJRvboyEWCWMg8UJ56GMR2ex9xG2vRfz8",
+      "e48T3MltT2v4FTKLzuUvpYKM8W4qeMlAClFpns_GGLc",
+    ],
   },
 };
 
