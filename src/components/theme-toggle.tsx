@@ -18,26 +18,25 @@ const LABELS: Record<Mode, string> = {
 
 // Tiny external store over localStorage[STORAGE_KEY] — read via
 // useSyncExternalStore rather than "read in an effect + setState" so the
-// server-rendered HTML (always "system", via getServerSnapshot) and the
+// server-rendered HTML (always "light", via getServerSnapshot) and the
 // client's first render never disagree, and updates from this component
 // or another tab both flow through the same subscription instead of a
 // setState-in-effect that eslint's react-hooks rules flag as an
 // anti-pattern.
 const listeners = new Set<() => void>();
 
-// Only "light" is ever explicitly stored. Anything else — no key, or a
-// leftover "dark"/"system" value from an earlier version of this toggle —
-// is treated as "follow the system". There used to be a separate Dark
-// option, but on a device whose OS is already in dark mode it was pixel-
-// identical to System, so it was just a second name for the same look;
-// dropping it leaves the two states that are actually different: always
-// light, or match the device.
+// Only "system" is ever explicitly stored. Anything else — no key, or a
+// leftover "dark"/"light" value from an earlier version of this toggle —
+// is treated as "light". Light is the default so the app opens in a known,
+// consistent look regardless of the visitor's OS setting; someone whose
+// device is in dark mode has to opt in to "System" once for this app to
+// follow it.
 function getSnapshot(): Mode {
-  return localStorage.getItem(STORAGE_KEY) === "light" ? "light" : "system";
+  return localStorage.getItem(STORAGE_KEY) === "system" ? "system" : "light";
 }
 
 function getServerSnapshot(): Mode {
-  return "system";
+  return "light";
 }
 
 function subscribe(callback: () => void) {
@@ -50,8 +49,8 @@ function subscribe(callback: () => void) {
 }
 
 function setStoredMode(next: Mode) {
-  if (next === "light") {
-    localStorage.setItem(STORAGE_KEY, "light");
+  if (next === "system") {
+    localStorage.setItem(STORAGE_KEY, "system");
   } else {
     localStorage.removeItem(STORAGE_KEY);
   }
