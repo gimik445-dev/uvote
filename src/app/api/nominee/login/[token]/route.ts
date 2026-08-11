@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { nomineeLoginTokens } from "@/db/schema";
 import {
@@ -11,8 +11,12 @@ import {
 } from "@/lib/nominee-auth";
 
 // Tapped straight from the SMS — a GET so the link "just works" with no
-// extra form/click. Single-use and expiring, verified server-side before
-// any session cookie is set.
+// extra form/click. Reusable (not single-use): a nominee should be able to
+// reopen the same link throughout their event, not just once, so this only
+// checks expiry, never `usedAt`. Effective expiry is the nominee's event
+// end date when the event has one — the token's own fallback TTL (see
+// LOGIN_TOKEN_TTL_DAYS in nominee-auth.ts) only applies to events left
+// without an end date, as a backstop against links staying valid forever.
 export async function GET(
   request: Request,
   ctx: RouteContext<"/api/nominee/login/[token]">
@@ -22,17 +26,31 @@ export async function GET(
   const tokenHash = hashToken(token);
 
   const row = await db.query.nomineeLoginTokens.findFirst({
-    where: and(eq(nomineeLoginTokens.tokenHash, tokenHash), isNull(nomineeLoginTokens.usedAt)),
+    where: eq(nomineeLoginTokens.tokenHash, tokenHash),
+    with: {
+      nominee: {
+        with: {
+          category: { with: { event: true } },
+        },
+      },
+    },
   });
 
-  if (!row || row.expiresAt < new Date()) {
+  const eventEndsAt = row?.nominee?.category?.event?.endsAt ?? null;
+  const effectiveExpiry = eventEndsAt ?? row?.expiresAt ?? null;
+
+  if (!row || !effectiveExpiry || effectiveExpiry < new Date()) {
     return NextResponse.redirect(`${baseUrl}/nominee/login-expired`);
   }
 
-  await db
-    .update(nomineeLoginTokens)
-    .set({ usedAt: new Date() })
-    .where(eq(nomineeLoginTokens.id, row.id));
+  // First-use timestamp is kept for tracking only — it no longer gates
+  // validity, so don't overwrite it on later opens.
+  if (!row.usedAt) {
+    await db
+      .update(nomineeLoginTokens)
+      .set({ usedAt: new Date() })
+      .where(eq(nomineeLoginTokens.id, row.id));
+  }
 
   const sessionToken = signNomineeSession({ nomineeId: row.nomineeId });
   const store = await cookies();
