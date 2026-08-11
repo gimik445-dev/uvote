@@ -115,13 +115,15 @@ function StructuredData() {
 // Runs before first paint (plain inline <script>, not next/script — this
 // one has to block) so the page never flashes light-then-dark or
 // dark-then-light. Reads the same localStorage key theme-toggle.tsx
-// writes to. Only 'light' is ever stored explicitly — anything else
-// (missing key, or a leftover 'dark'/'system' value from an earlier
-// version of the toggle) falls back to the OS preference, matching
-// theme-toggle.tsx's own getSnapshot().
+// writes to. Only 'system' is ever stored explicitly — anything else
+// (missing key, or a leftover 'dark'/'light' value from an earlier
+// version of the toggle) falls back to light, matching theme-toggle.tsx's
+// own getSnapshot(). Light is the default look regardless of the visitor's
+// OS setting; dark only appears once someone opts into "System" and their
+// device happens to be in dark mode.
 const noFlashThemeScript = `(function(){try{
-  var forcedLight = localStorage.getItem('uvote-theme') === 'light';
-  var dark = !forcedLight && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var followsSystem = localStorage.getItem('uvote-theme') === 'system';
+  var dark = followsSystem && window.matchMedia('(prefers-color-scheme: dark)').matches;
   document.documentElement.classList.toggle('dark', dark);
   document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
 } catch (e) {}})();`;
