@@ -7,8 +7,8 @@ export default function NomineeLoginExpiredPage() {
         <div className="text-3xl mb-4">⏳</div>
         <h1 className="text-xl font-extrabold mb-2">This link has expired</h1>
         <p className="text-sm text-ink-dim leading-relaxed">
-          Login links are single-use and expire after a couple weeks. Ask the organizer running
-          your event to resend your results link from their dashboard.
+          Your login link has expired. Ask the organizer running your event to resend your
+          results link from their dashboard.
         </p>
       </div>
     </main>
