@@ -374,7 +374,15 @@ function CategoryCard({
             We&apos;ll text this number a one-tap link to their private results page — never shared with voters.
           </p>
           <div className="flex items-center gap-3 mb-3">
-            <input type="file" accept="image/*" onChange={onPhotoChange} className="text-xs" />
+            <label className="btn btn-ghost btn-sm cursor-pointer inline-block">
+              {photoUrl ? "Change photo" : "Upload photo"}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={onPhotoChange}
+                className="hidden"
+              />
+            </label>
             {photoUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={photoUrl} alt="Preview" className="w-9 h-9 rounded-full object-cover" />
