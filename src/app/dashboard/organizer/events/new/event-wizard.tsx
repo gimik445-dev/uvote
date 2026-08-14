@@ -310,7 +310,15 @@ export function EventWizard() {
           <div>
             <Field label="Cover photo (optional)">
               <div className="flex items-center gap-3">
-                <input type="file" accept="image/*" onChange={onCoverChange} className="text-xs" />
+                <label className="btn btn-ghost btn-sm cursor-pointer inline-block">
+                  {coverImageUrl ? "Change photo" : "Upload photo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={onCoverChange}
+                    className="hidden"
+                  />
+                </label>
                 {coverImageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
