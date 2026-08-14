@@ -84,6 +84,7 @@ export async function getNomineeDashboard(nomineeId: string) {
     eventTitle: nominee.category.event.title,
     eventSlug: nominee.category.event.slug,
     eventCoverImageUrl: nominee.category.event.coverImageUrl,
+    pricePerVote: nominee.category.event.pricePerVote,
     organizationName: nominee.category.event.organization.name,
     opponents: nominee.category.nominees.filter((n) => n.id !== nominee.id),
     all: nominee.category.nominees,
