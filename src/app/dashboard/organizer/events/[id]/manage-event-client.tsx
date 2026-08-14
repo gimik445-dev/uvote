@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { getOrganizerEventDetail } from "@/lib/data";
-import { QrCodeCard } from "@/components/qr-code-card";
+import { FlierCard } from "@/components/flier-card";
 
 type EventDetail = NonNullable<Awaited<ReturnType<typeof getOrganizerEventDetail>>>;
 
@@ -14,7 +14,7 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
   const [copyLabel, setCopyLabel] = useState("Copy voting link");
   const [coverError, setCoverError] = useState<string | null>(null);
   const [coverUploading, setCoverUploading] = useState(false);
-  const [showQr, setShowQr] = useState(false);
+  const [showFlier, setShowFlier] = useState(false);
   // Computed after mount (not during render) so server- and client-side
   // markup match — window.location isn't available during SSR.
   const [votingUrl, setVotingUrl] = useState<string | null>(null);
@@ -118,8 +118,8 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
           <button onClick={copyLink} className="btn btn-ghost btn-sm">
             {copyLabel}
           </button>
-          <button onClick={() => setShowQr((s) => !s)} className="btn btn-ghost btn-sm">
-            {showQr ? "Hide QR code" : "QR code"}
+          <button onClick={() => setShowFlier((s) => !s)} className="btn btn-ghost btn-sm">
+            {showFlier ? "Hide flier" : "Flier"}
           </button>
           {event.status !== "active" && (
             <button
@@ -190,15 +190,21 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
         </div>
       )}
 
-      {showQr && (
+      {showFlier && (
         <div className="card p-6 mb-6 flex flex-col items-center">
-          <h3 className="font-bold mb-1 self-start">Voting link QR code</h3>
+          <h3 className="font-bold mb-1 self-start">Event flier</h3>
           <p className="text-xs text-ink-mute mb-4 self-start">
-            Print it on flyers or show it on a screen — scanning it opens the voting page
-            directly.
+            A ready-to-print flier with a small QR code and the uVote site name at the
+            bottom — download it and post it wherever your voters will see it.
           </p>
           {votingUrl ? (
-            <QrCodeCard url={votingUrl} label="Scan to vote, or click to open the link" />
+            <FlierCard
+              url={votingUrl}
+              title={event.title}
+              pricePerVote={Number(event.pricePerVote).toFixed(2)}
+              coverEmoji={event.coverEmoji}
+              coverImageUrl={event.coverImageUrl}
+            />
           ) : (
             <div className="text-xs text-ink-mute py-6">Loading…</div>
           )}
