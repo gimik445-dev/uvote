@@ -4,13 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 
 // Portrait, print-friendly proportions (roughly A4) at a resolution that
-// still looks sharp printed at A5/A6 — organizers are meant to download
-// this and print it, not just view it on screen.
+// still looks sharp printed at A5/A6 — organizers and nominees are meant
+// to download this and print it, not just view it on screen.
 const CANVAS_W = 1000;
 const CANVAS_H = 1400;
-// Deliberately small — this is one element at the bottom of a full poster,
-// not the hero (see QrCodeCard for the full-size standalone QR code).
-const QR_SIZE = 200;
+const PAD = 60;
+// A corner badge, not the hero — deliberately small so the photo and name
+// stay the focal point, matching how pageant/awards fliers usually put the
+// voting code in a small badge rather than center stage.
+const QR_SIZE = 160;
+const GAP = 24;
 const BRAND = "#5b57e8";
 const BRAND_DARK = "#1e1b6e";
 const ACCENT = "#f5a623";
@@ -18,22 +21,35 @@ const SITE_LABEL = "uvote.online";
 const FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif";
 
 /**
- * A printable event flier: title, price-per-vote, a small QR code, and the
- * uVote site name at the bottom — everything an organizer needs to post the
- * event publicly without having to design anything themselves.
+ * A printable flier: a photo background, a big name, a price-per-vote bar,
+ * and a small QR code badge in the bottom-right corner with the uVote site
+ * name — used both for a whole event (organizer dashboard) and for a single
+ * nominee (nominee dashboard), just with different copy and photo.
  */
 export function FlierCard({
   url,
+  kicker,
   title,
+  subtitle,
   pricePerVote,
-  coverEmoji,
-  coverImageUrl,
+  photoUrl,
+  fallbackEmoji,
+  fallbackInitials,
 }: {
+  /** The voting link the QR code encodes. */
   url: string;
+  /** Small label above the title, e.g. "TO VOTE" or the platform tagline. */
+  kicker?: string | null;
+  /** The big headline — event title or nominee name. */
   title: string;
+  /** Optional line under the title, e.g. category or organization name. */
+  subtitle?: string | null;
   pricePerVote: string;
-  coverEmoji?: string | null;
-  coverImageUrl?: string | null;
+  /** Background photo (event cover or nominee photo). */
+  photoUrl?: string | null;
+  /** Shown centered when there's no photo — pick one of emoji/initials. */
+  fallbackEmoji?: string | null;
+  fallbackInitials?: string | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
@@ -53,98 +69,138 @@ export function FlierCard({
     async function render() {
       if (!ctx) return;
       try {
-        const hasPhoto = Boolean(coverImageUrl);
+        const hasPhoto = Boolean(photoUrl);
 
-        if (coverImageUrl) {
-          const bg = await loadImage(coverImageUrl);
+        if (photoUrl) {
+          const img = await loadImage(photoUrl);
           if (cancelled) return;
-          drawCover(ctx, bg, 0, 0, CANVAS_W, CANVAS_H);
-          const overlay = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
-          overlay.addColorStop(0, "rgba(12,12,36,0.72)");
-          overlay.addColorStop(0.45, "rgba(12,12,36,0.32)");
-          overlay.addColorStop(1, "rgba(8,8,26,0.86)");
-          ctx.fillStyle = overlay;
-          ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+          drawCover(ctx, img, 0, 0, CANVAS_W, CANVAS_H);
         } else {
           const bgGrad = ctx.createLinearGradient(0, 0, CANVAS_W, CANVAS_H);
-          bgGrad.addColorStop(0, "#eef5ff");
-          bgGrad.addColorStop(1, "#dfe0ff");
+          bgGrad.addColorStop(0, BRAND);
+          bgGrad.addColorStop(1, BRAND_DARK);
           ctx.fillStyle = bgGrad;
           ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-          drawBlob(ctx, CANVAS_W * 0.15, CANVAS_H * 0.1, 260, BRAND, 0.16);
-          drawBlob(ctx, CANVAS_W * 0.85, CANVAS_H * 0.82, 300, ACCENT, 0.16);
         }
 
-        const textColor = hasPhoto ? "#ffffff" : BRAND_DARK;
+        // Dark gradient overlay, heaviest at the bottom where all the text
+        // sits, so everything stays legible over any photo.
+        const overlay = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+        overlay.addColorStop(0, "rgba(8,8,20,0.35)");
+        overlay.addColorStop(0.55, "rgba(8,8,20,0.25)");
+        overlay.addColorStop(0.78, "rgba(6,6,16,0.72)");
+        overlay.addColorStop(1, "rgba(4,4,12,0.92)");
+        ctx.fillStyle = overlay;
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+        if (!hasPhoto && (fallbackEmoji || fallbackInitials)) {
+          ctx.textAlign = "center";
+          if (fallbackEmoji) {
+            ctx.font = `160px ${FONT}`;
+            ctx.fillText(fallbackEmoji, CANVAS_W / 2, 420);
+          } else if (fallbackInitials) {
+            ctx.fillStyle = "rgba(255,255,255,0.15)";
+            ctx.beginPath();
+            ctx.arc(CANVAS_W / 2, 340, 130, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#ffffff";
+            ctx.font = `800 96px ${FONT}`;
+            ctx.fillText(fallbackInitials, CANVAS_W / 2, 372);
+          }
+        }
+
+        // Top-left uVote wordmark lockup
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `800 38px ${FONT}`;
+        ctx.fillText("uVote", PAD, PAD + 34);
+        ctx.font = `700 15px ${FONT}`;
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.fillText("PAY-PER-VOTE FUNDRAISING", PAD, PAD + 58);
+
+        // Bottom row geometry, computed first so the text block above it
+        // can be sized to land exactly above it, never overlapping.
+        const siteLineY = CANVAS_H - 46;
+        const rowBottomY = siteLineY - 40;
+        const rowY = rowBottomY - QR_SIZE;
+        const barW = CANVAS_W - PAD * 2 - QR_SIZE - GAP;
+
+        // Kicker / title / subtitle text block, laid out bottom-up so a
+        // longer wrapped title never collides with the kicker above it.
         ctx.textAlign = "center";
-
-        // Wordmark
-        ctx.fillStyle = hasPhoto ? "#ffffff" : BRAND;
-        ctx.font = `800 40px ${FONT}`;
-        ctx.fillText("uVote", CANVAS_W / 2, 110);
-        ctx.font = `600 20px ${FONT}`;
-        ctx.fillStyle = hasPhoto ? "rgba(255,255,255,0.85)" : "#5b5e85";
-        ctx.fillText("THE PAY-PER-VOTE FUNDRAISING PLATFORM", CANVAS_W / 2, 148);
-
-        // Cover emoji badge (only when there's no photo to show instead)
-        if (!hasPhoto && coverEmoji) {
-          ctx.font = `160px ${FONT}`;
-          ctx.fillText(coverEmoji, CANVAS_W / 2, 430);
+        let cursorY = rowY - 56;
+        if (subtitle) {
+          ctx.font = `600 26px ${FONT}`;
+          ctx.fillStyle = "rgba(255,255,255,0.85)";
+          ctx.fillText(subtitle, CANVAS_W / 2, cursorY);
+          cursorY -= 64;
         }
 
-        // Event title
-        ctx.fillStyle = textColor;
-        ctx.font = `800 70px ${FONT}`;
-        const titleY = hasPhoto ? 520 : 560;
-        wrapCenteredText(ctx, title, CANVAS_W / 2, titleY, CANVAS_W - 140, 80);
-
-        // Price pill
-        const priceText = `GHS ${pricePerVote} / VOTE`;
-        ctx.font = `700 30px ${FONT}`;
-        const pillW = ctx.measureText(priceText).width + 76;
-        const pillH = 60;
-        const pillY = titleY + 130;
-        drawRoundedRect(ctx, CANVAS_W / 2 - pillW / 2, pillY, pillW, pillH, pillH / 2);
+        ctx.font = `800 76px ${FONT}`;
         ctx.fillStyle = ACCENT;
+        cursorY = wrapCenteredTextBottomUp(
+          ctx,
+          title,
+          CANVAS_W / 2,
+          cursorY,
+          CANVAS_W - PAD * 2,
+          84,
+          3
+        );
+        cursorY -= 90;
+
+        if (kicker) {
+          ctx.font = `700 24px ${FONT}`;
+          ctx.fillStyle = "rgba(255,255,255,0.9)";
+          ctx.fillText(letterSpace(kicker.toUpperCase()), CANVAS_W / 2, cursorY);
+        }
+
+        // Bottom row: price bar on the left, QR badge at the far right.
+        drawRoundedRect(ctx, PAD, rowY, barW, QR_SIZE, 20);
+        ctx.fillStyle = "rgba(8,8,20,0.55)";
         ctx.fill();
-        ctx.fillStyle = "#241703";
-        ctx.textBaseline = "middle";
-        ctx.fillText(priceText, CANVAS_W / 2, pillY + pillH / 2 + 2);
-        ctx.textBaseline = "alphabetic";
+        ctx.strokeStyle = "rgba(255,255,255,0.25)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
 
-        // Tagline
-        ctx.font = `700 32px ${FONT}`;
-        ctx.fillStyle = textColor;
-        ctx.fillText("Vote now — every vote counts!", CANVAS_W / 2, pillY + pillH + 66);
+        ctx.textAlign = "left";
+        ctx.font = `700 18px ${FONT}`;
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        ctx.fillText(letterSpace("COST PER VOTE"), PAD + 28, rowY + 46);
+        ctx.font = `800 46px ${FONT}`;
+        ctx.fillStyle = ACCENT;
+        ctx.fillText(`GHS ${pricePerVote}`, PAD + 28, rowY + 100);
 
-        // Small QR code, bottom of the flier
-        const qrCanvas = document.createElement("canvas");
-        await QRCode.toCanvas(qrCanvas, url, {
-          errorCorrectionLevel: "M",
-          margin: 1,
-          width: QR_SIZE,
-          color: { dark: BRAND_DARK, light: "#ffffff" },
-        });
-        if (cancelled) return;
-        const qrX = CANVAS_W / 2 - QR_SIZE / 2;
-        const qrY = CANVAS_H - QR_SIZE - 170;
-        const pad = 18;
-        drawRoundedRect(ctx, qrX - pad, qrY - pad, QR_SIZE + pad * 2, QR_SIZE + pad * 2, 22);
+        const qrX = PAD + barW + GAP;
+        const qrY = rowY;
+        drawRoundedRect(ctx, qrX, qrY, QR_SIZE, QR_SIZE, 18);
         ctx.save();
-        ctx.shadowColor = "rgba(0,0,0,0.25)";
-        ctx.shadowBlur = 22;
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
+        ctx.shadowBlur = 18;
         ctx.fillStyle = "#ffffff";
         ctx.fill();
         ctx.restore();
-        ctx.drawImage(qrCanvas, qrX, qrY, QR_SIZE, QR_SIZE);
 
-        // Caption + site name under the QR code
-        ctx.font = `600 24px ${FONT}`;
-        ctx.fillStyle = textColor;
-        ctx.fillText("Scan to vote", CANVAS_W / 2, qrY + QR_SIZE + pad + 46);
-        ctx.font = `800 28px ${FONT}`;
-        ctx.fillStyle = hasPhoto ? "#ffffff" : BRAND;
-        ctx.fillText(SITE_LABEL, CANVAS_W / 2, qrY + QR_SIZE + pad + 86);
+        const qrPad = 12;
+        const qrCanvas = document.createElement("canvas");
+        await QRCode.toCanvas(qrCanvas, url, {
+          errorCorrectionLevel: "M",
+          margin: 0,
+          width: QR_SIZE - qrPad * 2,
+          color: { dark: BRAND_DARK, light: "#ffffff" },
+        });
+        if (cancelled) return;
+        ctx.drawImage(qrCanvas, qrX + qrPad, qrY + qrPad, QR_SIZE - qrPad * 2, QR_SIZE - qrPad * 2);
+
+        ctx.textAlign = "center";
+        ctx.font = `700 16px ${FONT}`;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(letterSpace("SCAN TO VOTE"), qrX + QR_SIZE / 2, qrY - 14);
+
+        // Site name, centered, below the row.
+        ctx.font = `800 26px ${FONT}`;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(SITE_LABEL, CANVAS_W / 2, siteLineY);
 
         if (!cancelled) setReady(true);
       } catch {
@@ -156,7 +212,7 @@ export function FlierCard({
     return () => {
       cancelled = true;
     };
-  }, [url, title, pricePerVote, coverEmoji, coverImageUrl]);
+  }, [url, kicker, title, subtitle, pricePerVote, photoUrl, fallbackEmoji, fallbackInitials]);
 
   function download() {
     const canvas = canvasRef.current;
@@ -198,6 +254,12 @@ export function FlierCard({
   );
 }
 
+// Canvas has no native letter-spacing — hair spaces between characters fake
+// it well enough for short uppercase labels like "TO VOTE" or "SCAN TO VOTE".
+function letterSpace(text: string): string {
+  return text.split("").join("  ");
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -233,23 +295,6 @@ function drawCover(
   ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
 }
 
-function drawBlob(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  color: string,
-  alpha: number
-) {
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
 function drawRoundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -267,17 +312,21 @@ function drawRoundedRect(
   ctx.closePath();
 }
 
-// Word-wraps `text` into centered lines within `maxWidth`. Caps at 3 lines
-// so an unusually long event title can't push the QR code off the canvas —
-// a 4th+ line gets folded into an ellipsized 3rd line instead.
-function wrapCenteredText(
+// Word-wraps `text` into centered lines within `maxWidth`, anchored so the
+// LAST line's baseline sits at `bottomY` — callers stack elements bottom-up
+// so a longer wrapped title pushes the elements above it up, rather than
+// colliding with them. Caps at `maxLines`; a line beyond that gets folded
+// into an ellipsized final line instead of overflowing the canvas. Returns
+// the y just above the first (topmost) line, for the next element up.
+function wrapCenteredTextBottomUp(
   ctx: CanvasRenderingContext2D,
   text: string,
   cx: number,
-  y: number,
+  bottomY: number,
   maxWidth: number,
-  lineHeight: number
-) {
+  lineHeight: number,
+  maxLines: number
+): number {
   const words = text.split(" ");
   const lines: string[] = [];
   let current = "";
@@ -292,7 +341,6 @@ function wrapCenteredText(
   }
   if (current) lines.push(current);
 
-  const maxLines = 3;
   const shown = lines.slice(0, maxLines);
   if (lines.length > maxLines) {
     let last = shown[maxLines - 1];
@@ -302,6 +350,9 @@ function wrapCenteredText(
     shown[maxLines - 1] = `${last}…`;
   }
 
-  const startY = y - ((shown.length - 1) * lineHeight) / 2;
-  shown.forEach((line, i) => ctx.fillText(line, cx, startY + i * lineHeight));
+  for (let i = shown.length - 1; i >= 0; i--) {
+    const y = bottomY - (shown.length - 1 - i) * lineHeight;
+    ctx.fillText(shown[i], cx, y);
+  }
+  return bottomY - (shown.length - 1) * lineHeight;
 }
