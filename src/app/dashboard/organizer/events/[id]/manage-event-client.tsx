@@ -200,10 +200,11 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
           {votingUrl ? (
             <FlierCard
               url={votingUrl}
+              kicker="The pay-per-vote fundraising platform"
               title={event.title}
               pricePerVote={Number(event.pricePerVote).toFixed(2)}
-              coverEmoji={event.coverEmoji}
-              coverImageUrl={event.coverImageUrl}
+              photoUrl={event.coverImageUrl}
+              fallbackEmoji={event.coverEmoji}
             />
           ) : (
             <div className="text-xs text-ink-mute py-6">Loading…</div>
