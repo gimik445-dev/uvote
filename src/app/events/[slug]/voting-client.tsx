@@ -66,6 +66,25 @@ export function EventVotingClient({ event }: { event: EventData }) {
   const [modalNominee, setModalNominee] = useState<Nominee | null>(null);
   const searchParams = useSearchParams();
   const voteOutcome = searchParams.get("vote");
+  // Lets a nominee's flier QR code (?nominee=<id>) jump straight to that
+  // nominee's vote modal instead of leaving the visitor to find them among
+  // however many other nominees are on the page.
+  const nomineeParam = searchParams.get("nominee");
+
+  useEffect(() => {
+    if (!nomineeParam) return;
+    for (const c of event.categories) {
+      const match = c.nominees.find((n) => n.id === nomineeParam);
+      if (match) {
+        setActiveCategoryId(c.id);
+        setModalNominee(match);
+        break;
+      }
+    }
+    // Only ever act on the URL param that was present on load — deliberately
+    // not re-running this if event.categories were to change identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nomineeParam]);
 
   const activeCategory = event.categories.find((c) => c.id === activeCategoryId);
 
