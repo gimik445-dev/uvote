@@ -4,7 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type OrgBalance = {
-  organization: { id: string; name: string; slug: string; commissionPercent: string };
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    commissionPercent: string;
+    payoutMomoNumber: string | null;
+    payoutBankDetails: string | null;
+  };
   totalRevenue: number;
   balanceGross: number;
   balanceCommission: number;
@@ -25,6 +32,26 @@ type Payout = {
   createdAt: Date;
   organization: { name: string } | null;
 };
+
+// Surfaces where the admin should actually send the money — organizers set
+// this in their own settings, but until now it wasn't visible on the admin
+// payouts page, so an admin had to go digging in the database or ask the
+// organizer directly before every transfer.
+function PayoutDestination({
+  organization,
+}: {
+  organization: { payoutMomoNumber: string | null; payoutBankDetails: string | null };
+}) {
+  if (!organization.payoutMomoNumber && !organization.payoutBankDetails) {
+    return <div className="text-xs text-critical mt-0.5">No payout details on file</div>;
+  }
+  return (
+    <div className="text-xs text-ink-mute mt-0.5 leading-relaxed">
+      {organization.payoutMomoNumber && <div>Momo: {organization.payoutMomoNumber}</div>}
+      {organization.payoutBankDetails && <div>Bank: {organization.payoutBankDetails}</div>}
+    </div>
+  );
+}
 
 export function PayoutsClient({
   orgBalances,
@@ -112,7 +139,10 @@ export function PayoutsClient({
             <tbody>
               {owedOrgs.map((o) => (
                 <tr key={o.organization.id} className="border-b border-border last:border-0">
-                  <td className="py-3 font-bold">{o.organization.name}</td>
+                  <td className="py-3">
+                    <div className="font-bold">{o.organization.name}</div>
+                    <PayoutDestination organization={o.organization} />
+                  </td>
                   <td className="py-3">GHS {o.balanceGross.toFixed(2)}</td>
                   <td className="py-3 text-ink-mute">GHS {o.balanceCommission.toFixed(2)}</td>
                   <td className="py-3 font-bold text-brand">GHS {o.balanceNet.toFixed(2)}</td>
