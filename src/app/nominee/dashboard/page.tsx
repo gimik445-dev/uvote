@@ -3,6 +3,7 @@ import { getNomineeSession } from "@/lib/nominee-session";
 import { getNomineeDashboard } from "@/lib/data";
 import { NomineeVoteChart } from "./vote-chart";
 import { NomineeHeader } from "./nominee-header";
+import { NomineeFlierSection } from "./nominee-flier-section";
 
 export const metadata = { title: "Your results — uVote" };
 
@@ -67,6 +68,16 @@ export default async function NomineeDashboardPage() {
           This page is private to you — voters never see vote counts, only you and your event
           organizer can.
         </p>
+        <NomineeFlierSection
+          nomineeId={data.id}
+          displayName={data.displayName}
+          subtitle={data.subtitle}
+          photoUrl={data.photoUrl}
+          eventSlug={data.eventSlug}
+          eventTitle={data.eventTitle}
+          categoryName={data.categoryName}
+          pricePerVote={data.pricePerVote}
+        />
       </section>
     </main>
   );
