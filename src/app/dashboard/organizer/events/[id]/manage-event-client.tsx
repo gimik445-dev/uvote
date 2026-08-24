@@ -15,6 +15,9 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
   const [coverError, setCoverError] = useState<string | null>(null);
   const [coverUploading, setCoverUploading] = useState(false);
   const [showFlier, setShowFlier] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   // Computed after mount (not during render) so server- and client-side
   // markup match — window.location isn't available during SSR.
   const [votingUrl, setVotingUrl] = useState<string | null>(null);
@@ -80,6 +83,27 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
       }
     };
     reader.readAsDataURL(file);
+  }
+
+  async function deleteEvent() {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/organizer/events/${event.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        setDeleteError(json?.error ?? "Something went wrong deleting this event.");
+        setConfirmingDelete(false);
+        return;
+      }
+      router.push("/dashboard/organizer");
+      router.refresh();
+    } catch {
+      setDeleteError("Network error — please try again.");
+      setConfirmingDelete(false);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   function copyLink() {
@@ -148,8 +172,48 @@ export function ManageEventClient({ event }: { event: EventDetail }) {
               Archive
             </button>
           )}
+          <button
+            disabled={deleting}
+            onClick={() => setConfirmingDelete(true)}
+            className="btn btn-ghost btn-sm text-critical"
+          >
+            Delete event
+          </button>
         </div>
       </div>
+
+      {confirmingDelete && (
+        <div className="card p-4 mb-6 border-l-4 border-l-critical">
+          <p className="text-sm font-bold mb-1">Delete &ldquo;{event.title}&rdquo;?</p>
+          <p className="text-xs text-ink-mute mb-3">
+            This permanently deletes the event, its categories, and its nominees. This
+            can&apos;t be undone. Events with recorded payments can&apos;t be deleted — end
+            them instead.
+          </p>
+          <div className="flex gap-2">
+            <button
+              disabled={deleting}
+              onClick={deleteEvent}
+              className="btn btn-sm bg-critical text-white hover:opacity-90"
+            >
+              {deleting ? "Deleting…" : "Yes, delete it"}
+            </button>
+            <button
+              disabled={deleting}
+              onClick={() => setConfirmingDelete(false)}
+              className="btn btn-ghost btn-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {deleteError && (
+        <div className="card p-4 mb-6 border-l-4 border-l-critical text-sm text-critical">
+          {deleteError}
+        </div>
+      )}
 
       <div className="card p-4 mb-6 flex items-center gap-4">
         {event.coverImageUrl ? (
