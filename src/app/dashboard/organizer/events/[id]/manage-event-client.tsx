@@ -303,6 +303,17 @@ function CategoryCard({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resendState, setResendState] = useState<Record<string, string>>({});
+  // Nominee photo is optional in the API/schema (see the nominees route) —
+  // votes are the point, not headshots, so a nominee without a photo still
+  // saves fine server-side. But this is a voting UI, where a photo is what
+  // actually makes a nominee card recognizable, so we require it here in
+  // the form only: block submit and highlight it just like the truly
+  // required fields, without touching the underlying optional schema.
+  const [fieldErrors, setFieldErrors] = useState<{
+    displayName?: boolean;
+    phone?: boolean;
+    photo?: boolean;
+  }>({});
 
   function onPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -313,13 +324,28 @@ function CategoryCard({
     }
     const reader = new FileReader();
     reader.onerror = () => setError("Couldn't read that photo — please try a different file.");
-    reader.onload = () => setPhotoUrl(reader.result as string);
+    reader.onload = () => {
+      setPhotoUrl(reader.result as string);
+      if (fieldErrors.photo) setFieldErrors((f) => ({ ...f, photo: false }));
+    };
     reader.readAsDataURL(file);
   }
 
   async function addNominee(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const missing = {
+      displayName: !displayName.trim(),
+      phone: !phone.trim(),
+      photo: !photoUrl,
+    };
+    if (missing.displayName || missing.phone || missing.photo) {
+      setFieldErrors(missing);
+      setError("Fill in the highlighted fields before adding this nominee.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch(`/api/organizer/categories/${category.id}/nominees`, {
@@ -341,6 +367,7 @@ function CategoryCard({
       setSubtitle("");
       setPhone("");
       setPhotoUrl(null);
+      setFieldErrors({});
       setShowForm(false);
       router.refresh();
     } catch {
@@ -423,9 +450,12 @@ function CategoryCard({
             <input
               required
               value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              onChange={(e) => {
+                setDisplayName(e.target.value);
+                if (fieldErrors.displayName) setFieldErrors((f) => ({ ...f, displayName: false }));
+              }}
               placeholder="Nominee name"
-              className="input"
+              className={`input${fieldErrors.displayName ? " input-error" : ""}`}
             />
             <input
               value={subtitle}
@@ -436,16 +466,23 @@ function CategoryCard({
             <input
               required
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                if (fieldErrors.phone) setFieldErrors((f) => ({ ...f, phone: false }));
+              }}
               placeholder="Nominee's phone (024 000 0000)"
-              className="input sm:col-span-2"
+              className={`input sm:col-span-2${fieldErrors.phone ? " input-error" : ""}`}
             />
           </div>
           <p className="text-xs text-ink-mute mb-3">
             We&apos;ll text this number a one-tap link to their private results page — never shared with voters.
           </p>
-          <div className="flex items-center gap-3 mb-3">
-            <label className="btn btn-ghost btn-sm cursor-pointer inline-block">
+          <div className="flex items-center gap-3 mb-1">
+            <label
+              className={`btn btn-ghost btn-sm cursor-pointer inline-block${
+                fieldErrors.photo ? " input-error" : ""
+              }`}
+            >
               {photoUrl ? "Change photo" : "Upload photo"}
               <input
                 type="file"
@@ -459,6 +496,11 @@ function CategoryCard({
               <img src={photoUrl} alt="Preview" className="w-9 h-9 rounded-full object-cover" />
             )}
           </div>
+          {fieldErrors.photo && (
+            <p className="text-critical text-xs mb-3 font-semibold">
+              Add a photo — nominees are much easier to recognize on the voting page with one.
+            </p>
+          )}
           {error && <p className="text-critical text-sm mb-3">{error}</p>}
           <button type="submit" disabled={loading} className="btn btn-primary btn-sm">
             {loading ? "Adding…" : "Add nominee"}
@@ -474,10 +516,18 @@ function AddCategoryForm({ eventId }: { eventId: string }) {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nameMissing, setNameMissing] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (!name.trim()) {
+      setNameMissing(true);
+      setError("Enter a category name first.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch(`/api/organizer/events/${eventId}/categories`, {
@@ -508,9 +558,12 @@ function AddCategoryForm({ eventId }: { eventId: string }) {
         <input
           required
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            if (nameMissing) setNameMissing(false);
+          }}
           placeholder="e.g. Best Dressed"
-          className="input"
+          className={`input${nameMissing ? " input-error" : ""}`}
         />
       </div>
       {error && <p className="text-critical text-sm">{error}</p>}
