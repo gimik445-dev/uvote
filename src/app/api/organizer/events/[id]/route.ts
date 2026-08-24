@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { events } from "@/db/schema";
+import { events, payments } from "@/db/schema";
 import { requireRole } from "@/lib/session";
 
 const schema = z
@@ -68,4 +68,48 @@ export async function PATCH(
     .returning();
 
   return NextResponse.json({ event: updated });
+}
+
+// Permanently deletes an event (and, via schema cascade, its categories,
+// nominees, and payment rows). Refused for any event that has a real
+// (successful) payment on it — deleting that would silently erase revenue
+// history the admin payouts page and the organization's own records depend
+// on. Use "End Event" to retire a live event instead; this endpoint is for
+// clearing out drafts/test events that never took real money.
+export async function DELETE(
+  request: Request,
+  ctx: RouteContext<"/api/organizer/events/[id]">
+) {
+  let session;
+  try {
+    session = await requireRole(["organizer"]);
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await ctx.params;
+
+  const event = await db.query.events.findFirst({ where: eq(events.id, id) });
+  if (!event || event.organizationId !== session.organizationId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const successfulPayment = await db.query.payments.findFirst({
+    where: and(eq(payments.eventId, id), eq(payments.status, "success")),
+  });
+  if (successfulPayment) {
+    return NextResponse.json(
+      {
+        error:
+          "This event has recorded payments and can't be deleted, to protect the revenue history. End the event instead to close it to voting.",
+      },
+      { status: 409 }
+    );
+  }
+
+  await db
+    .delete(events)
+    .where(and(eq(events.id, id), eq(events.organizationId, session.organizationId!)));
+
+  return NextResponse.json({ ok: true });
 }
