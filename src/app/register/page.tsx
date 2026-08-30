@@ -1,4 +1,4 @@
-x"use client";
+"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -11,12 +11,35 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Tracks which required fields were empty (or, for password, too short)
+  // on the last submit attempt — drives the red-border highlight so a
+  // skipped field is obvious instead of relying on the browser's own
+  // validation tooltip.
+  const [fieldErrors, setFieldErrors] = useState<{
+    fullName?: boolean;
+    organizationName?: boolean;
+    email?: boolean;
+    password?: boolean;
+  }>({});
   const [loading, setLoading] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const missing = {
+      fullName: !fullName.trim(),
+      organizationName: !organizationName.trim(),
+      email: !email.trim(),
+      password: password.length < 8,
+    };
+    setFieldErrors(missing);
+    if (Object.values(missing).some(Boolean)) {
+      setError("Fill in the highlighted field(s) before continuing.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -78,25 +101,61 @@ export default function RegisterPage() {
       </p>
 
       <form onSubmit={onSubmit} className="card p-7 w-full max-w-sm">
-        <Field label="Your full name">
-          <input required value={fullName} onChange={(e) => setFullName(e.target.value)}
-            placeholder="Ama Boateng" className="input" />
+        <Field label="Your full name" error={fieldErrors.fullName ? "Enter your name." : undefined}>
+          <input
+            required
+            value={fullName}
+            onChange={(e) => {
+              setFullName(e.target.value);
+              if (fieldErrors.fullName) setFieldErrors((f) => ({ ...f, fullName: false }));
+            }}
+            placeholder="Ama Boateng"
+            className={`input${fieldErrors.fullName ? " input-error" : ""}`}
+          />
         </Field>
-        <Field label="Organization name">
-          <input required value={organizationName} onChange={(e) => setOrganizationName(e.target.value)}
-            placeholder="e.g. Grace Community Church, CS Department, Rotary Club" className="input" />
+        <Field
+          label="Organization name"
+          error={fieldErrors.organizationName ? "Enter your organization's name." : undefined}
+        >
+          <input
+            required
+            value={organizationName}
+            onChange={(e) => {
+              setOrganizationName(e.target.value);
+              if (fieldErrors.organizationName) setFieldErrors((f) => ({ ...f, organizationName: false }));
+            }}
+            placeholder="e.g. Grace Community Church, CS Department, Rotary Club"
+            className={`input${fieldErrors.organizationName ? " input-error" : ""}`}
+          />
         </Field>
-        <Field label="Email address">
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-            placeholder="amaboateng@gmail.com" className="input" />
+        <Field label="Email address" error={fieldErrors.email ? "Enter your email address." : undefined}>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (fieldErrors.email) setFieldErrors((f) => ({ ...f, email: false }));
+            }}
+            placeholder="amaboateng@gmail.com"
+            className={`input${fieldErrors.email ? " input-error" : ""}`}
+          />
         </Field>
-        <Field label="Password" last>
+        <Field
+          label="Password"
+          last
+          error={fieldErrors.password ? "Password must be at least 8 characters." : undefined}
+        >
           <PasswordInput
             value={password}
-            onChange={setPassword}
+            onChange={(v) => {
+              setPassword(v);
+              if (fieldErrors.password) setFieldErrors((f) => ({ ...f, password: false }));
+            }}
             placeholder="At least 8 characters"
             required
             minLength={8}
+            error={fieldErrors.password}
             inputClassName="input"
           />
         </Field>
@@ -117,10 +176,12 @@ function Field({
   label,
   children,
   last,
+  error,
 }: {
   label: string;
   children: React.ReactNode;
   last?: boolean;
+  error?: string;
 }) {
   return (
     <div className={last ? "mb-5" : "mb-4"}>
@@ -128,6 +189,7 @@ function Field({
         {label}
       </label>
       {children}
+      {error && <p className="text-critical text-xs mt-1.5 font-semibold">{error}</p>}
     </div>
   );
 }
