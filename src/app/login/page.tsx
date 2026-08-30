@@ -1,4 +1,4 @@
-x"use client";
+"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,10 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Which required fields were empty on the last submit attempt — drives
+  // the red-border treatment so a missed field is obvious at a glance
+  // instead of relying on the browser's own validation tooltip.
+  const [fieldErrors, setFieldErrors] = useState<{ email?: boolean; password?: boolean }>({});
   const [needsVerification, setNeedsVerification] = useState(false);
   const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [loading, setLoading] = useState(false);
@@ -20,6 +24,14 @@ export default function LoginPage() {
     setError(null);
     setNeedsVerification(false);
     setResendStatus("idle");
+
+    const missing = { email: !email.trim(), password: !password };
+    setFieldErrors(missing);
+    if (missing.email || missing.password) {
+      setError("Fill in the highlighted field before signing in.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -73,9 +85,14 @@ export default function LoginPage() {
           type="email"
           required
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (fieldErrors.email) setFieldErrors((f) => ({ ...f, email: false }));
+          }}
           placeholder="you@gmail.com"
-          className="w-full rounded-xl border border-border-strong bg-background px-4 py-3 text-sm mb-4 outline-none focus:border-brand"
+          className={`w-full rounded-xl border border-border-strong bg-background px-4 py-3 text-sm mb-4 outline-none focus:border-brand${
+            fieldErrors.email ? " input-error" : ""
+          }`}
         />
         <div className="flex items-center justify-between mb-2">
           <label className="block text-[11px] font-extrabold tracking-wide text-ink-mute uppercase">
@@ -87,9 +104,13 @@ export default function LoginPage() {
         </div>
         <PasswordInput
           value={password}
-          onChange={setPassword}
+          onChange={(v) => {
+            setPassword(v);
+            if (fieldErrors.password) setFieldErrors((f) => ({ ...f, password: false }));
+          }}
           placeholder="••••••••"
           required
+          error={fieldErrors.password}
           className="mb-5"
           inputClassName="w-full rounded-xl border border-border-strong bg-background px-4 py-3 text-sm outline-none focus:border-brand"
         />
