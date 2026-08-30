@@ -31,6 +31,10 @@ export function EventWizard() {
   const [eventId, setEventId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Which of the current step's fields were left empty on the last
+  // "Continue" click — drives the red-border highlight so a skipped field
+  // is obvious instead of a generic error banner people can miss.
+  const [fieldErrors, setFieldErrors] = useState<{ title?: boolean; price?: boolean; category?: boolean }>({});
 
   // Step 1 — identity
   const [title, setTitle] = useState("");
@@ -76,13 +80,26 @@ export function EventWizard() {
 
   async function saveStepAndContinue() {
     setError(null);
+
+    if (step === 0 && title.trim().length < 3) {
+      setFieldErrors((f) => ({ ...f, title: true }));
+      setError("Give the event a title (at least 3 characters).");
+      return;
+    }
+    if (step === 1 && !(Number(pricePerVote) > 0)) {
+      setFieldErrors((f) => ({ ...f, price: true }));
+      setError("Set a price per vote greater than 0.");
+      return;
+    }
+    if (step === 3 && categories.length === 0) {
+      setFieldErrors((f) => ({ ...f, category: true }));
+      setError("Add at least one category before continuing.");
+      return;
+    }
+
     setLoading(true);
     try {
       if (step === 0) {
-        if (title.trim().length < 3) {
-          setError("Give the event a title (at least 3 characters).");
-          return;
-        }
         if (!eventId) {
           const res = await fetch("/api/organizer/events", {
             method: "POST",
@@ -164,6 +181,7 @@ export function EventWizard() {
       }
       setCategories((c) => [...c, json.category]);
       setNewCategory("");
+      if (fieldErrors.category) setFieldErrors((f) => ({ ...f, category: false }));
     } catch {
       setError("Network error — please try again.");
     } finally {
@@ -253,13 +271,19 @@ export function EventWizard() {
 
         {step === 0 && (
           <div>
-            <Field label="Event title">
+            <Field
+              label="Event title"
+              error={fieldErrors.title ? "Give the event a title (at least 3 characters)." : undefined}
+            >
               <input
                 required
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  if (fieldErrors.title) setFieldErrors((f) => ({ ...f, title: false }));
+                }}
                 placeholder="Excellence Awards Night '26"
-                className="input"
+                className={`input${fieldErrors.title ? " input-error" : ""}`}
                 autoFocus
               />
             </Field>
@@ -281,15 +305,21 @@ export function EventWizard() {
 
         {step === 1 && (
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Price per vote (GHS)">
+            <Field
+              label="Price per vote (GHS)"
+              error={fieldErrors.price ? "Set a price per vote greater than 0." : undefined}
+            >
               <input
                 type="number"
                 min={0.1}
                 step={0.1}
                 required
                 value={pricePerVote}
-                onChange={(e) => setPricePerVote(e.target.value)}
-                className="input"
+                onChange={(e) => {
+                  setPricePerVote(e.target.value);
+                  if (fieldErrors.price) setFieldErrors((f) => ({ ...f, price: false }));
+                }}
+                className={`input${fieldErrors.price ? " input-error" : ""}`}
               />
             </Field>
             <Field label="Voting ends (optional)">
@@ -308,9 +338,20 @@ export function EventWizard() {
 
         {step === 2 && (
           <div>
-            <Field label="Cover photo (optional)">
+            <Field
+              label="Cover photo (optional)"
+              error={
+                !coverImageUrl
+                  ? "No photo added yet — events with a cover photo stand out a lot more to voters."
+                  : undefined
+              }
+            >
               <div className="flex items-center gap-3">
-                <label className="btn btn-ghost btn-sm cursor-pointer inline-block">
+                <label
+                  className={`btn btn-ghost btn-sm cursor-pointer inline-block${
+                    !coverImageUrl ? " input-error" : ""
+                  }`}
+                >
                   {coverImageUrl ? "Change photo" : "Upload photo"}
                   <input
                     type="file"
@@ -349,9 +390,12 @@ export function EventWizard() {
             <form onSubmit={addCategory} className="flex gap-2 mb-4">
               <input
                 value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
+                onChange={(e) => {
+                  setNewCategory(e.target.value);
+                  if (fieldErrors.category) setFieldErrors((f) => ({ ...f, category: false }));
+                }}
                 placeholder="e.g. Best Dressed, Most Influential"
-                className="input"
+                className={`input${fieldErrors.category ? " input-error" : ""}`}
               />
               <button
                 type="submit"
@@ -361,8 +405,17 @@ export function EventWizard() {
                 Add
               </button>
             </form>
+            {fieldErrors.category && (
+              <p className="text-critical text-xs -mt-2.5 mb-4 font-semibold">
+                Add at least one category before continuing.
+              </p>
+            )}
             {categories.length === 0 ? (
-              <p className="text-sm text-ink-mute py-6 text-center">
+              <p
+                className={`text-sm py-6 text-center rounded-xl ${
+                  fieldErrors.category ? "input-error text-critical" : "text-ink-mute"
+                }`}
+              >
                 No categories yet — add at least one to open voting.
               </p>
             ) : (
@@ -505,13 +558,22 @@ export function EventWizard() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+  error,
+}: {
+  label: string;
+  children: React.ReactNode;
+  error?: string;
+}) {
   return (
     <div className="mb-4">
       <label className="block text-[11px] font-extrabold tracking-wide text-ink-mute uppercase mb-2">
         {label}
       </label>
       {children}
+      {error && <p className="text-critical text-xs mt-1.5 font-semibold">{error}</p>}
     </div>
   );
 }
