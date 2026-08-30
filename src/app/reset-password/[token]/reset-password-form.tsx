@@ -1,4 +1,4 @@
-x"use client";
+"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,12 +9,20 @@ export function ResetPasswordForm({ token }: { token: string }) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [passwordInvalid, setPasswordInvalid] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (password.length < 8) {
+      setPasswordInvalid(true);
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/auth/reset-password", {
@@ -55,10 +63,14 @@ export function ResetPasswordForm({ token }: { token: string }) {
       </label>
       <PasswordInput
         value={password}
-        onChange={setPassword}
+        onChange={(v) => {
+          setPassword(v);
+          if (passwordInvalid) setPasswordInvalid(false);
+        }}
         placeholder="At least 8 characters"
         required
         minLength={8}
+        error={passwordInvalid}
         autoFocus
         className="mb-5"
         inputClassName="w-full rounded-xl border border-border-strong bg-background px-4 py-3 text-sm outline-none focus:border-brand"
