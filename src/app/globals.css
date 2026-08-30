@@ -1,4 +1,4 @@
-@import "tailwindcss";
+x@import "tailwindcss";
 
 /* Serif display face for headings — self-hosted via @fontsource (static
    files bundled at build time) rather than next/font/google, since that
