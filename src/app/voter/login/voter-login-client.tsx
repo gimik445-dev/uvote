@@ -1,4 +1,4 @@
-x"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -31,6 +31,11 @@ export function VoterLoginClient() {
   const [code, setCode] = useState("");
   const [channel, setChannel] = useState<Channel>("sms");
   const [error, setError] = useState<string | null>(null);
+  // Red-highlight state for the currently-shown step's single field, kept
+  // separate from `error` (the server/network message) so both can show at
+  // once — a blank field never reaches the server anyway.
+  const [phoneMissing, setPhoneMissing] = useState(false);
+  const [codeMissing, setCodeMissing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [callingVoice, setCallingVoice] = useState(false);
@@ -89,6 +94,13 @@ export function VoterLoginClient() {
   async function requestCode(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (!phone.trim()) {
+      setPhoneMissing(true);
+      setError("Enter your phone number first.");
+      return;
+    }
+
     setLoading(true);
     try {
       const testMode = await sendCode();
@@ -169,6 +181,13 @@ export function VoterLoginClient() {
   async function verifyCode(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (!code.trim()) {
+      setCodeMissing(true);
+      setError("Enter the code you were sent.");
+      return;
+    }
+
     setLoading(true);
     try {
       const endpoint = channel === "voice" ? "/api/voter/otp/voice-verify" : "/api/voter/otp/verify";
@@ -198,9 +217,12 @@ export function VoterLoginClient() {
           required
           type="tel"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => {
+            setPhone(e.target.value);
+            if (phoneMissing) setPhoneMissing(false);
+          }}
           placeholder="024 000 0000"
-          className="input w-full"
+          className={`input w-full${phoneMissing ? " input-error" : ""}`}
           autoFocus
         />
         {error && <p className="text-critical text-sm">{error}</p>}
@@ -236,10 +258,13 @@ export function VoterLoginClient() {
       <input
         required
         value={code}
-        onChange={(e) => setCode(e.target.value)}
+        onChange={(e) => {
+          setCode(e.target.value);
+          if (codeMissing) setCodeMissing(false);
+        }}
         placeholder="6-digit code"
         inputMode="numeric"
-        className="input w-full text-center tracking-widest"
+        className={`input w-full text-center tracking-widest${codeMissing ? " input-error" : ""}`}
         autoFocus
       />
       {error && <p className="text-critical text-sm">{error}</p>}
@@ -284,6 +309,7 @@ export function VoterLoginClient() {
           setChannel("sms");
           setStep("phone");
           setCode("");
+          setCodeMissing(false);
           setError(null);
         }}
         className="text-xs text-ink-mute w-full text-center"
