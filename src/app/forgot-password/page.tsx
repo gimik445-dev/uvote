@@ -1,4 +1,4 @@
-x"use client";
+"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -7,12 +7,20 @@ import { Logo } from "@/components/logo";
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [emailMissing, setEmailMissing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (!email.trim()) {
+      setEmailMissing(true);
+      setError("Enter your email address before continuing.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/auth/forgot-password", {
@@ -75,10 +83,15 @@ export default function ForgotPasswordPage() {
           type="email"
           required
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (emailMissing) setEmailMissing(false);
+          }}
           placeholder="you@gmail.com"
           autoFocus
-          className="w-full rounded-xl border border-border-strong bg-background px-4 py-3 text-sm mb-5 outline-none focus:border-brand"
+          className={`w-full rounded-xl border border-border-strong bg-background px-4 py-3 text-sm mb-5 outline-none focus:border-brand${
+            emailMissing ? " input-error" : ""
+          }`}
         />
         {error && <p className="text-critical text-sm mb-4">{error}</p>}
         <button type="submit" disabled={loading} className="btn btn-primary w-full">
