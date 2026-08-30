@@ -22,11 +22,6 @@ export function PasswordInput({
   autoFocus,
   className = "",
   inputClassName,
-  // When set, the field gets the same red-border treatment as every other
-  // required-and-empty field in the app — see the `.input-error` styles in
-  // globals.css. Callers using the shared `.input` class can just pass
-  // `error` and get it for free; callers on raw Tailwind borders (login,
-  // forgot/reset-password) also work since `.input-error` uses !important.
   error,
 }: {
   value: string;
@@ -37,6 +32,11 @@ export function PasswordInput({
   autoFocus?: boolean;
   className?: string;
   inputClassName: string;
+  // When set, the field gets the same red-border treatment as every other
+  // required-and-empty field in the app — see the `.input-error` styles in
+  // globals.css. Callers using the shared `.input` class can just pass
+  // `error` and get it for free; callers on raw Tailwind borders (login,
+  // forgot/reset-password) also work since `.input-error` uses !important.
   error?: boolean;
 }) {
   const [visible, setVisible] = useState(false);
@@ -56,6 +56,9 @@ export function PasswordInput({
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}
+        // Keeps the toggle out of tab order — it's a convenience, not a
+        // field, and inserting it into the tab sequence between password
+        // and submit would be a jarring surprise for keyboard users.
         tabIndex={-1}
         aria-label={visible ? "Hide password" : "Show password"}
         aria-pressed={visible}
