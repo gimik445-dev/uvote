@@ -1,4 +1,4 @@
-x@import "tailwindcss";
+@import "tailwindcss";
 
 /* Serif display face for headings — self-hosted via @fontsource (static
    files bundled at build time) rather than next/font/google, since that
@@ -239,6 +239,20 @@ h1, h2, h3, h4 {
 }
 .input:focus {
   border-color: var(--brand);
+}
+
+/* Applied to any .input (or the few raw-Tailwind inputs that don't use that
+   class — see their own border-critical overrides) once a form's submit
+   attempt finds it empty, so a missed required field is impossible to miss
+   instead of relying on the browser's own (easy-to-scroll-past) validation
+   tooltip. Paired with an inline red message under the field — see the
+   various forms' `error`/`fieldErrors` state. */
+.input-error {
+  border-color: var(--critical) !important;
+  background: var(--critical-bg);
+}
+.input-error:focus {
+  border-color: var(--critical) !important;
 }
 
 /* Accordion pattern — used by FAQ and Guidelines to keep the mobile
