@@ -212,7 +212,7 @@ export function VoterLoginClient() {
 
   if (step === "phone") {
     return (
-      <form onSubmit={requestCode} className="space-y-3">
+      <form onSubmit={requestCode} noValidate className="space-y-3">
         <input
           required
           type="tel"
@@ -234,7 +234,7 @@ export function VoterLoginClient() {
   }
 
   return (
-    <form onSubmit={verifyCode} className="space-y-3">
+    <form onSubmit={verifyCode} noValidate className="space-y-3">
       {info && <p className="text-xs text-ink-mute text-center">{info}</p>}
       {showSlowHint && !devCode && channel === "sms" && (
         <div className="text-center space-y-1.5">
