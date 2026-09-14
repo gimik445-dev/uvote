@@ -77,7 +77,7 @@ export default function LoginPage() {
       <h1 className="text-2xl font-extrabold mb-1">Welcome back</h1>
       <p className="text-ink-dim text-sm mb-7">Sign in to your dashboard</p>
 
-      <form onSubmit={onSubmit} className="card p-7 w-full max-w-sm">
+      <form onSubmit={onSubmit} noValidate className="card p-7 w-full max-w-sm">
         <label className="block text-[11px] font-extrabold tracking-wide text-ink-mute uppercase mb-2">
           Email
         </label>
