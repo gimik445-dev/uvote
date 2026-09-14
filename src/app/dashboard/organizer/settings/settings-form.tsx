@@ -51,7 +51,7 @@ export function SettingsForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="card p-7 max-w-lg">
+    <form onSubmit={onSubmit} noValidate className="card p-7 max-w-lg">
       <div className="mb-5">
         <label className="block text-[11px] font-extrabold tracking-wide text-ink-mute uppercase mb-2">
           Account email
