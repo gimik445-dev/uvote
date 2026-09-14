@@ -100,7 +100,7 @@ export default function RegisterPage() {
         club or community group.
       </p>
 
-      <form onSubmit={onSubmit} className="card p-7 w-full max-w-sm">
+      <form onSubmit={onSubmit} noValidate className="card p-7 w-full max-w-sm">
         <Field label="Your full name" error={fieldErrors.fullName ? "Enter your name." : undefined}>
           <input
             required
