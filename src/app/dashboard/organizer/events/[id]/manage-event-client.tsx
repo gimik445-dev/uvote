@@ -445,7 +445,7 @@ function CategoryCard({
       )}
 
       {showForm && (
-        <form onSubmit={addNominee} className="border-t border-border pt-4 mt-3">
+        <form onSubmit={addNominee} noValidate className="border-t border-border pt-4 mt-3">
           <div className="grid sm:grid-cols-2 gap-3 mb-3">
             <input
               required
@@ -550,7 +550,7 @@ function AddCategoryForm({ eventId }: { eventId: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="card p-5 mt-6 flex flex-wrap items-end gap-3">
+    <form onSubmit={onSubmit} noValidate className="card p-5 mt-6 flex flex-wrap items-end gap-3">
       <div className="flex-1 min-w-[200px]">
         <label className="block text-[11px] font-extrabold tracking-wide text-ink-mute uppercase mb-2">
           New category
